@@ -7,12 +7,23 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/The-baremetal/Aether2)](https://github.com/The-baremetal/Aether2/graphs/contributors)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/The-baremetal/Aether2)](https://github.com/The-baremetal/Aether2/commits)
 
-** Notice: AetherC has absolutely no association from the above **
-- **Youtubers**
-- **People**
-- **Corporations and trademarks before and after Aether**
-- **Any governmental or trademarked asset**
-- **Any other unrelated project except projects in this organisation or website**
+---
+
+### ⚠️ Name Usage Disclaimer
+
+**AetherC is an independent software project. Any unrelated use of this name is unauthorized and may violate our project’s terms.**
+
+**AetherC has absolutely no association with:**
+
+- YouTube, TikTok, or social channels posting harmful or unrelated content  
+- Influencers or public personalities  
+- Corporations or trademarks past or present  
+- Any government entity or trademarked assets  
+- Any other projects **not listed under this organization or website**
+
+AetherC stands for **Aether Compiler**. Any resemblance to other names is purely coincidental. Please ignore any misuses of the name by unrelated parties.
+
+---
 
 ## Get started
 - [Read documentation 📖](https://github.com/The-baremetal/Aether2/blob/main/docs)
