@@ -1,0 +1,3 @@
+[dependencies]
+  [dependencies.depmod]
+    path = "lib/core/depmod.ae"

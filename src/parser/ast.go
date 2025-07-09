@@ -34,8 +34,9 @@ type Function struct {
 	Body   *Block        `json:"body"`
 }
 
-func (f *Function) node()      {}
-func (f *Function) statement() {}
+func (f *Function) node()       {}
+func (f *Function) statement()  {}
+func (f *Function) expression() {}
 
 type StructDef struct {
 	Name   *Identifier   `json:"name"`
@@ -103,9 +104,17 @@ type Import struct {
 func (i *Import) node()      {}
 func (i *Import) statement() {}
 
+type CComment struct {
+	Content string `json:"content"`
+}
+
+func (c *CComment) node()      {}
+func (c *CComment) statement() {}
+
 type Identifier struct {
-	Value string `json:"value"`
-	Type  string `json:"type"`
+	Value    string `json:"value"`
+	Type     string `json:"type"`
+	IsVararg bool   `json:"is_vararg,omitempty"`
 }
 
 func (i *Identifier) node()       {}
@@ -155,6 +164,15 @@ func (p *PartialApplication) node()       {}
 func (p *PartialApplication) expression() {}
 func (p *PartialApplication) statement()  {}
 
+type Spread struct {
+	Name string
+}
+
+func (s *Spread) expression()    {}
+func (s *Spread) node()          {}
+func (s *Spread) Statement()     {}
+func (s *Spread) String() string { return "..." + s.Name }
+
 type NodeKind string
 
 const (
@@ -172,11 +190,14 @@ const (
 	WhileKind              NodeKind = "While"
 	RepeatKind             NodeKind = "Repeat"
 	ImportKind             NodeKind = "Import"
+	CCommentKind           NodeKind = "CComment"
 	ArrayKind              NodeKind = "Array"
 	CallKind               NodeKind = "Call"
 	PropertyAccessKind     NodeKind = "PropertyAccess"
 	ForKind                NodeKind = "For"
 	PartialApplicationKind NodeKind = "PartialApplication"
+	MatchKind              NodeKind = "Match"
+	CaseKind               NodeKind = "Case"
 )
 
 type ASTNode struct {
@@ -241,4 +262,141 @@ func mapArgsToASTNodes(args []Expression) []*ASTNode {
 		result = append(result, expressionToASTNode(a))
 	}
 	return result
+}
+
+type Match struct {
+	Expr  Expression
+	Cases []*Case
+}
+
+func (m *Match) node()      {}
+func (m *Match) statement() {}
+
+type Case struct {
+	Pattern Expression
+	Body    *Block
+}
+
+func (c *Case) node() {}
+
+func matchToASTNode(m *Match) *ASTNode {
+	cases := make([]*ASTNode, len(m.Cases))
+	for i, c := range m.Cases {
+		cases[i] = caseToASTNode(c)
+	}
+	return &ASTNode{
+		NodeKind: MatchKind,
+		Left:     expressionToASTNode(m.Expr),
+		Inner:    cases,
+	}
+}
+
+func caseToASTNode(c *Case) *ASTNode {
+	return &ASTNode{
+		NodeKind: CaseKind,
+		Left:     expressionToASTNode(c.Pattern),
+		Body:     blockToASTNode(c.Body),
+	}
+}
+
+func blockToASTNode(b *Block) *ASTNode {
+	statements := make([]*ASTNode, len(b.Statements))
+	for i, stmt := range b.Statements {
+		statements[i] = statementToASTNode(stmt)
+	}
+	return &ASTNode{
+		NodeKind: BlockKind,
+		Inner:    statements,
+	}
+}
+
+func statementToASTNode(s Statement) *ASTNode {
+	switch stmt := s.(type) {
+	case *Match:
+		return matchToASTNode(stmt)
+	case *Assignment:
+		return &ASTNode{
+			NodeKind: AssignmentKind,
+			Left:     expressionToASTNode(stmt.Name),
+			Right:    expressionToASTNode(stmt.Value),
+		}
+	case *Function:
+		params := make([]*ASTNode, len(stmt.Params))
+		for i, param := range stmt.Params {
+			params[i] = &ASTNode{
+				NodeKind: ParamKind,
+				Value:    param.Value,
+			}
+		}
+		return &ASTNode{
+			NodeKind: FunctionDeclKind,
+			Name:     stmt.Name.Value,
+			Params:   params,
+			Body:     blockToASTNode(stmt.Body),
+		}
+	case *StructDef:
+		fields := make([]*ASTNode, len(stmt.Fields))
+		for i, field := range stmt.Fields {
+			fields[i] = &ASTNode{
+				NodeKind: ParamKind, // Assuming ParamKind is used for fields
+				Value:    field.Value,
+			}
+		}
+		return &ASTNode{
+			NodeKind: StructDefKind,
+			Name:     stmt.Name.Value,
+			Params:   fields,
+		}
+	case *If:
+		return &ASTNode{
+			NodeKind: IfKind,
+			Left:     expressionToASTNode(stmt.Condition),
+			Body:     blockToASTNode(stmt.Consequence),
+			Inner:    []*ASTNode{blockToASTNode(stmt.Alternative)},
+		}
+	case *While:
+		return &ASTNode{
+			NodeKind: WhileKind,
+			Left:     expressionToASTNode(stmt.Condition),
+			Body:     blockToASTNode(stmt.Body),
+		}
+	case *Repeat:
+		return &ASTNode{
+			NodeKind: RepeatKind,
+			Left:     expressionToASTNode(stmt.Count),
+			Body:     blockToASTNode(stmt.Body),
+		}
+	case *For:
+		index := &ASTNode{
+			NodeKind: ParamKind,
+			Value:    stmt.Index.Value,
+		}
+		value := &ASTNode{
+			NodeKind: ParamKind,
+			Value:    stmt.Value.Value,
+		}
+		return &ASTNode{
+			NodeKind: ForKind,
+			Left:     index,
+			Right:    value,
+			Body:     blockToASTNode(stmt.Body),
+		}
+	case *Return:
+		return &ASTNode{
+			NodeKind: ReturnKind,
+			Left:     expressionToASTNode(stmt.Value),
+		}
+	case *Import:
+		return &ASTNode{
+			NodeKind: ImportKind,
+			Left:     expressionToASTNode(stmt.Name),
+			Right:    expressionToASTNode(stmt.As),
+		}
+	case *CComment:
+		return &ASTNode{
+			NodeKind: CCommentKind,
+			Value:    stmt.Content,
+		}
+	}
+	return nil
 }

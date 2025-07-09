@@ -1,20 +1,20 @@
 package compiler
 
 import (
-	"tinygo.org/x/go-llvm"
+	"github.com/llir/llvm/ir"
+	"github.com/llir/llvm/ir/types"
 )
 
-func createMainFunction(ctx *CompilerContext) llvm.Value {
-	mainFnType := llvm.FunctionType(ctx.llvm_context.Int32Type(), []llvm.Type{}, false)
-	mainFn := llvm.AddFunction(ctx.module, "main", mainFnType)
+func createMainFunction(ctx *CompilerContext) *ir.Func {
+	mainFn := ctx.module.NewFunc("main", types.I32)
 	ctx.SetCurrentFunction(mainFn)
 	return mainFn
 }
 
-func addEntryBlock(ctx *CompilerContext, fn llvm.Value) llvm.BasicBlock {
-	return ctx.llvm_context.AddBasicBlock(fn, "entry")
+func addEntryBlock(ctx *CompilerContext, fn *ir.Func) *ir.Block {
+	return fn.NewBlock("entry")
 }
 
-func setInsertPoint(ctx *CompilerContext, block llvm.BasicBlock) {
-	ctx.builder.SetInsertPointAtEnd(block)
+func setInsertPoint(ctx *CompilerContext, block *ir.Block) {
+	ctx.builder = block
 }

@@ -6,7 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+
+	"aether/lib/utils"
+
+	"github.com/BurntSushi/toml"
 )
 
 type AnalysisResult struct {
@@ -22,6 +27,7 @@ type AnalysisResult struct {
 	Cycles       [][]string
 	Unused       []string
 	Undefined    []string
+	CIncludes    []CInclude
 }
 
 type ImportInfo struct {
@@ -72,6 +78,29 @@ type ParameterInfo struct {
 	Type string
 }
 
+type DependencyInfo struct {
+	Path    string `toml:"path"`
+	Version string `toml:"version,omitempty"`
+}
+
+type LockFile struct {
+	Dependencies map[string]DependencyInfo `toml:"dependencies"`
+}
+
+type DependencyAnalysis struct {
+	Valid        bool
+	Errors       []utils.ParseError
+	Warnings     []string
+	ResolvedDeps map[string]string
+	MissingDeps  []string
+	UnusedDeps   []string
+}
+
+type CInclude struct {
+	Header   string
+	IsSystem bool
+}
+
 func AnalyzeProject(projectPath string) *AnalysisResult {
 	result := &AnalysisResult{
 		Valid:        true,
@@ -86,6 +115,7 @@ func AnalyzeProject(projectPath string) *AnalysisResult {
 		Cycles:       [][]string{},
 		Unused:       []string{},
 		Undefined:    []string{},
+		CIncludes:    []CInclude{},
 	}
 
 	files, err := findAetherFiles(projectPath)
@@ -108,6 +138,317 @@ func AnalyzeProject(projectPath string) *AnalysisResult {
 	return result
 }
 
+func AnalyzeAST(ast *parser.ASTNode) *AnalysisResult {
+	result := &AnalysisResult{
+		Valid:        true,
+		Errors:       []string{},
+		Warnings:     []string{},
+		Imports:      make(map[string]ImportInfo),
+		Functions:    make(map[string]FunctionInfo),
+		Variables:    make(map[string]VariableInfo),
+		Types:        make(map[string]TypeInfo),
+		Constants:    make(map[string]ConstantInfo),
+		Dependencies: make(map[string][]string),
+		Cycles:       [][]string{},
+		Unused:       []string{},
+		Undefined:    []string{},
+		CIncludes:    []CInclude{},
+	}
+
+	extractCIncludes(ast, result)
+	return result
+}
+
+func extractCIncludes(node *parser.ASTNode, result *AnalysisResult) {
+	if node == nil {
+		return
+	}
+
+	if node.NodeKind == parser.CCommentKind {
+		if content, ok := node.Value.(string); ok {
+			includes := parseCIncludes(content)
+			result.CIncludes = append(result.CIncludes, includes...)
+		}
+	}
+
+	for _, inner := range node.Inner {
+		extractCIncludes(inner, result)
+	}
+
+	if node.Left != nil {
+		extractCIncludes(node.Left, result)
+	}
+
+	if node.Right != nil {
+		extractCIncludes(node.Right, result)
+	}
+
+	if node.Body != nil {
+		extractCIncludes(node.Body, result)
+	}
+
+	for _, param := range node.Params {
+		extractCIncludes(param, result)
+	}
+}
+
+func AnalyzeDependencies(projectPath string) *DependencyAnalysis {
+	result := &DependencyAnalysis{
+		Valid:        true,
+		Errors:       []utils.ParseError{},
+		Warnings:     []string{},
+		ResolvedDeps: make(map[string]string),
+		MissingDeps:  []string{},
+		UnusedDeps:   []string{},
+	}
+
+	// Read aether.toml
+	configPath := filepath.Join(projectPath, "aether.toml")
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		result.Valid = false
+		// Read the actual file content for the snippet
+		content, _ := os.ReadFile(filepath.Join(projectPath, "aether.toml"))
+		snippet := ""
+		if len(content) > 0 {
+			lines := strings.Split(string(content), "\n")
+			if len(lines) > 0 {
+				snippet = lines[0] // Show first line as context
+			}
+		}
+		result.Errors = append(result.Errors, utils.ParseError{
+			Message: fmt.Sprintf("Failed to read aether.toml: %v", err),
+			File:    filepath.Join(projectPath, "aether.toml"),
+			Snippet: snippet,
+			Caret:   1,
+			Fix:     "Check if aether.toml exists in the project root",
+		})
+		return result
+	}
+
+	var config struct {
+		Dependencies map[string]string `toml:"dependencies"`
+	}
+
+	if err := toml.Unmarshal(configData, &config); err != nil {
+		result.Valid = false
+		// Read the actual file content for the snippet
+		lines := strings.Split(string(configData), "\n")
+		snippet := ""
+		if len(lines) > 0 {
+			snippet = lines[0] // Show first line as context
+		}
+		result.Errors = append(result.Errors, utils.ParseError{
+			Message: fmt.Sprintf("Failed to parse aether.toml: %v", err),
+			File:    filepath.Join(projectPath, "aether.toml"),
+			Snippet: snippet,
+			Caret:   1,
+			Fix:     "Check if aether.toml has valid TOML syntax",
+		})
+		return result
+	}
+
+	// Read lock file if it exists
+	lockPath := filepath.Join(projectPath, "aether.lock")
+	var lockFile LockFile
+	if lockData, err := os.ReadFile(lockPath); err == nil {
+		if err := toml.Unmarshal(lockData, &lockFile); err != nil {
+			result.Warnings = append(result.Warnings, "Failed to parse aether.lock, will regenerate")
+		}
+	}
+
+	// Analyze source files for imports and function usage
+	files, err := findAetherFiles(filepath.Join(projectPath, "src"))
+	if err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, utils.ParseError{
+			Message: fmt.Sprintf("Failed to find source files: %v", err),
+			File:    filepath.Join(projectPath, "src"),
+			Fix:     "Create a 'src' directory with .ae files",
+		})
+		return result
+	}
+
+	importedModules := make(map[string]bool)
+	moduleFunctions := make(map[string]map[string]bool)
+
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			result.Errors = append(result.Errors, utils.ParseError{
+				Message: fmt.Sprintf("Failed to read %s: %v", file, err),
+				File:    file,
+				Fix:     "Check file permissions and ensure the file exists",
+			})
+			continue
+		}
+
+		l := lexer.NewLexer(string(content))
+		p := parser.NewParser(l)
+		ast := p.Parse()
+
+		if len(p.Errors.Errors) > 0 {
+			for _, err := range p.Errors.Errors {
+				// Copy the rich error context from the parser
+				richError := utils.ParseError{
+					Kind:          err.Kind,
+					Message:       err.Message,
+					Line:          err.Line,
+					Column:        err.Column,
+					File:          file,
+					Snippet:       err.Snippet,
+					Caret:         err.Caret,
+					Fix:           err.Fix,
+					SpecReference: err.SpecReference,
+					CodemodPrompt: err.CodemodPrompt,
+				}
+				result.Errors = append(result.Errors, richError)
+			}
+			continue
+		}
+
+		// Extract imports and functions from AST
+		currentModuleName := strings.TrimSuffix(filepath.Base(file), ".ae")
+		moduleFunctions[currentModuleName] = make(map[string]bool)
+
+		for _, stmt := range ast.Statements {
+			if importStmt, ok := stmt.(*parser.Import); ok {
+				importedModuleName := importStmt.Name.Value
+				if importStmt.As != nil && importStmt.As.Value != "" {
+					importedModuleName = importStmt.As.Value
+				}
+				importedModules[importedModuleName] = true
+			}
+
+			if assign, ok := stmt.(*parser.Assignment); ok {
+				moduleFunctions[currentModuleName][assign.Name.Value] = true
+			}
+
+			if funcDecl, ok := stmt.(*parser.Function); ok {
+				moduleFunctions[currentModuleName][funcDecl.Name.Value] = true
+			}
+		}
+	}
+
+	// Validate imports against declared dependencies
+	for moduleName := range importedModules {
+		if depPath, exists := config.Dependencies[moduleName]; exists {
+			// Check if the dependency file exists
+			fullDepPath := filepath.Join(projectPath, depPath)
+			if _, err := os.Stat(fullDepPath); os.IsNotExist(err) {
+				result.MissingDeps = append(result.MissingDeps, moduleName)
+				result.Valid = false
+				result.Errors = append(result.Errors, utils.ParseError{
+					Message: fmt.Sprintf("Dependency %s not found at %s", moduleName, depPath),
+					File:    filepath.Join(projectPath, "aether.toml"),
+					Fix:     fmt.Sprintf("Add '%s = \"%s\"' to dependencies in aether.toml", moduleName, depPath),
+				})
+			} else {
+				result.ResolvedDeps[moduleName] = fullDepPath
+			}
+		} else {
+			result.Valid = false
+			// Read the actual aether.toml content for the snippet
+			content, _ := os.ReadFile(filepath.Join(projectPath, "aether.toml"))
+			snippet := ""
+			if len(content) > 0 {
+				lines := strings.Split(string(content), "\n")
+				// Find the dependencies section
+				for _, line := range lines {
+					if strings.Contains(line, "dependencies") {
+						snippet = line
+						break
+					}
+				}
+			}
+			result.Errors = append(result.Errors, utils.ParseError{
+				Message:       fmt.Sprintf("Import '%s' not declared in dependencies", moduleName),
+				File:          filepath.Join(projectPath, "aether.toml"),
+				Snippet:       snippet,
+				Caret:         len(snippet) + 1, // Caret at end of line
+				Fix:           fmt.Sprintf("Add '%s = \"path/to/module\"' to dependencies in aether.toml", moduleName),
+				CodemodPrompt: fmt.Sprintf("Do you want to add '%s' to dependencies? (y/n)", moduleName),
+			})
+		}
+	}
+
+	// Validate function calls against available functions
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+
+		l := lexer.NewLexer(string(content))
+		p := parser.NewParser(l)
+		ast := p.Parse()
+
+		if len(p.Errors.ToMessages()) > 0 {
+			continue
+		}
+
+		// Check all function calls in this file
+		validateFunctionCalls(ast, moduleFunctions, result)
+	}
+
+	// Check for unused dependencies
+	for depName := range config.Dependencies {
+		if !importedModules[depName] {
+			result.UnusedDeps = append(result.UnusedDeps, depName)
+			result.Warnings = append(result.Warnings, fmt.Sprintf("Unused dependency: %s", depName))
+		}
+	}
+
+	// Validate lock file consistency
+	if len(lockFile.Dependencies) > 0 {
+		for depName, lockInfo := range lockFile.Dependencies {
+			if configPath, exists := config.Dependencies[depName]; exists {
+				if lockInfo.Path != configPath {
+					result.Warnings = append(result.Warnings, fmt.Sprintf("Lock file mismatch for %s: expected %s, got %s", depName, configPath, lockInfo.Path))
+				}
+			} else {
+				result.Warnings = append(result.Warnings, fmt.Sprintf("Lock file contains undeclared dependency: %s", depName))
+			}
+		}
+	}
+
+	return result
+}
+
+func GenerateLockFile(projectPath string) error {
+	configPath := filepath.Join(projectPath, "aether.toml")
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read aether.toml: %v", err)
+	}
+
+	var config struct {
+		Dependencies map[string]string `toml:"dependencies"`
+	}
+
+	if err := toml.Unmarshal(configData, &config); err != nil {
+		return fmt.Errorf("failed to parse aether.toml: %v", err)
+	}
+
+	lockFile := LockFile{
+		Dependencies: make(map[string]DependencyInfo),
+	}
+
+	for depName, depPath := range config.Dependencies {
+		lockFile.Dependencies[depName] = DependencyInfo{
+			Path: depPath,
+		}
+	}
+
+	lockData, err := toml.Marshal(lockFile)
+	if err != nil {
+		return fmt.Errorf("failed to marshal lock file: %v", err)
+	}
+
+	lockPath := filepath.Join(projectPath, "aether.lock")
+	return os.WriteFile(lockPath, lockData, 0644)
+}
+
 func analyzeFile(filePath string, result *AnalysisResult) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -120,9 +461,9 @@ func analyzeFile(filePath string, result *AnalysisResult) {
 	parser := parser.NewParser(lexer)
 	ast := parser.Parse()
 
-	if len(parser.Errors.ToMessages()) > 0 {
-		for _, msg := range parser.Errors.ToMessages() {
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: %s", filePath, msg))
+	if len(parser.Errors.Errors) > 0 {
+		for _, err := range parser.Errors.Errors {
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %s", filePath, utils.FormatErrorWithContext(err)))
 		}
 		return
 	}
@@ -158,6 +499,8 @@ func analyzeStatement(stmt parser.Statement, filePath string, result *AnalysisRe
 		analyzeReturnStatement(s, filePath, result)
 	case *parser.Block:
 		analyzeBlock(s, filePath, result)
+	case *parser.CComment:
+		analyzeCComment(s, filePath, result)
 	}
 }
 
@@ -295,6 +638,48 @@ func analyzeReturnStatement(ret *parser.Return, filePath string, result *Analysi
 func analyzeBlock(block *parser.Block, filePath string, result *AnalysisResult) {
 	for _, stmt := range block.Statements {
 		analyzeStatement(stmt, filePath, result)
+	}
+}
+
+func analyzeCComment(comment *parser.CComment, filePath string, result *AnalysisResult) {
+	includes := parseCIncludes(comment.Content)
+	result.CIncludes = append(result.CIncludes, includes...)
+}
+
+func parseCIncludes(content string) []CInclude {
+	var includes []CInclude
+
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "//") {
+			line = strings.TrimSpace(line[2:])
+		}
+
+		if strings.HasPrefix(line, "#include") {
+			include := parseIncludeDirective(line)
+			if include != nil {
+				includes = append(includes, *include)
+			}
+		}
+	}
+
+	return includes
+}
+
+func parseIncludeDirective(line string) *CInclude {
+	re := regexp.MustCompile(`#include\s*[<"]([^>"]+)[>"]`)
+	matches := re.FindStringSubmatch(line)
+	if len(matches) < 2 {
+		return nil
+	}
+
+	header := matches[1]
+	isSystem := strings.Contains(line, "<") && strings.Contains(line, ">")
+
+	return &CInclude{
+		Header:   header,
+		IsSystem: isSystem,
 	}
 }
 
@@ -479,12 +864,9 @@ func isExported(name string) bool {
 }
 
 func isStdlibFunction(name string) bool {
-	stdlibFuncs := []string{"print", "println", "len", "cap", "append", "make", "new", "delete", "close", "panic", "recover"}
-	for _, funcName := range stdlibFuncs {
-		if name == funcName {
-			return true
-		}
-	}
+	// Stdlib functions are now defined in actual Aether files
+	// This function is kept for backward compatibility but always returns false
+	// The real stdlib functions are in lib/core/*.ae files
 	return false
 }
 
@@ -504,4 +886,75 @@ func findAetherFiles(root string) ([]string, error) {
 	})
 
 	return files, err
+}
+
+func validateFunctionCalls(ast *parser.Program, moduleFunctions map[string]map[string]bool, result *DependencyAnalysis) {
+	for _, stmt := range ast.Statements {
+		validateStatementFunctionCalls(stmt, moduleFunctions, result)
+	}
+}
+
+func validateStatementFunctionCalls(stmt parser.Statement, moduleFunctions map[string]map[string]bool, result *DependencyAnalysis) {
+	switch s := stmt.(type) {
+	case *parser.Block:
+		for _, subStmt := range s.Statements {
+			validateStatementFunctionCalls(subStmt, moduleFunctions, result)
+		}
+	case *parser.If:
+		validateStatementFunctionCalls(s.Consequence, moduleFunctions, result)
+		if s.Alternative != nil {
+			validateStatementFunctionCalls(s.Alternative, moduleFunctions, result)
+		}
+	case *parser.While:
+		validateStatementFunctionCalls(s.Body, moduleFunctions, result)
+	case *parser.For:
+		validateStatementFunctionCalls(s.Body, moduleFunctions, result)
+	case *parser.Function:
+		validateStatementFunctionCalls(s.Body, moduleFunctions, result)
+	}
+
+	// Check for function calls in expressions
+	validateExpressionFunctionCalls(stmt, moduleFunctions, result)
+}
+
+func validateExpressionFunctionCalls(expr interface{}, moduleFunctions map[string]map[string]bool, result *DependencyAnalysis) {
+	switch e := expr.(type) {
+	case *parser.Call:
+		if ident, ok := e.Function.(*parser.Identifier); ok {
+			if !isStdlibFunction(ident.Value) {
+				// Check if function exists in any module
+				found := false
+				for moduleName, functions := range moduleFunctions {
+					_ = moduleName
+					if functions[ident.Value] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					result.Valid = false
+					result.Errors = append(result.Errors, utils.ParseError{
+						Message: fmt.Sprintf("Undefined function: %s", ident.Value),
+					})
+				}
+			}
+		}
+	case *parser.PropertyAccess:
+		if moduleIdent, ok := e.Object.(*parser.Identifier); ok {
+			// Check if module.property exists
+			if functions, exists := moduleFunctions[moduleIdent.Value]; exists {
+				if !functions[e.Property.Value] {
+					result.Valid = false
+					result.Errors = append(result.Errors, utils.ParseError{
+						Message: fmt.Sprintf("Undefined property: %s.%s", moduleIdent.Value, e.Property.Value),
+					})
+				}
+			} else {
+				result.Valid = false
+				result.Errors = append(result.Errors, utils.ParseError{
+					Message: fmt.Sprintf("Undefined module: %s", moduleIdent.Value),
+				})
+			}
+		}
+	}
 }

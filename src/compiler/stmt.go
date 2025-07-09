@@ -3,63 +3,64 @@ package compiler
 import (
 	"aether/src/parser"
 
-	"tinygo.org/x/go-llvm"
+	"github.com/llir/llvm/ir/constant"
+	"github.com/llir/llvm/ir/types"
 )
 
 func compileStmt(stmt parser.Statement, ctx *CompilerContext) {
 	switch s := stmt.(type) {
 	case *parser.Assignment:
-		value := compileExpr(s.Value, ctx)
-		alloca := ctx.builder.CreateAlloca(value.Type(), s.Name.Value)
-		ctx.builder.CreateStore(value, alloca)
+		val := compileExpr(s.Value, ctx)
+		alloca := ctx.builder.NewAlloca(val.Type())
+		alloca.SetName(s.Name.Value)
+		ctx.builder.NewStore(val, alloca)
 		ctx.SetSymbol(s.Name.Value, alloca)
 	case *parser.Function:
-		fnType := llvm.FunctionType(ctx.llvm_context.Int32Type(), nil, false)
-		fn := llvm.AddFunction(ctx.module, s.Name.Value, fnType)
+		fn := ctx.module.NewFunc(s.Name.Value, types.I32)
 		ctx.SetSymbol(s.Name.Value, fn)
-		block := ctx.llvm_context.AddBasicBlock(fn, "entry")
-		ctx.builder.SetInsertPointAtEnd(block)
+		block := fn.NewBlock("entry")
+		ctx.builder = block
 		for _, stmt := range s.Body.Statements {
 			compileStmt(stmt, ctx)
 		}
-		ctx.builder.CreateRet(llvm.ConstInt(ctx.llvm_context.Int32Type(), 0, false))
+		ctx.builder.NewRet(constant.NewInt(types.I32, 0))
 	case *parser.StructDef:
 		// Structs are not codegen'd directly in LLVM IR here
 	case *parser.If:
 		cond := compileExpr(s.Condition, ctx)
-		parent := ctx.builder.GetInsertBlock().Parent()
-		thenBlock := ctx.llvm_context.AddBasicBlock(parent, "then")
-		elseBlock := ctx.llvm_context.AddBasicBlock(parent, "else")
-		mergeBlock := ctx.llvm_context.AddBasicBlock(parent, "merge")
-		ctx.builder.CreateCondBr(cond, thenBlock, elseBlock)
-		ctx.builder.SetInsertPointAtEnd(thenBlock)
+		parent := ctx.current_func
+		thenBlock := parent.NewBlock("then")
+		elseBlock := parent.NewBlock("else")
+		mergeBlock := parent.NewBlock("merge")
+		ctx.builder.NewCondBr(cond, thenBlock, elseBlock)
+		ctx.builder = thenBlock
 		for _, stmt := range s.Consequence.Statements {
 			compileStmt(stmt, ctx)
 		}
-		ctx.builder.CreateBr(mergeBlock)
-		ctx.builder.SetInsertPointAtEnd(elseBlock)
+		ctx.builder.NewBr(mergeBlock)
+		ctx.builder = elseBlock
 		if s.Alternative != nil {
 			for _, stmt := range s.Alternative.Statements {
 				compileStmt(stmt, ctx)
 			}
 		}
-		ctx.builder.CreateBr(mergeBlock)
-		ctx.builder.SetInsertPointAtEnd(mergeBlock)
+		ctx.builder.NewBr(mergeBlock)
+		ctx.builder = mergeBlock
 	case *parser.While:
-		parent := ctx.builder.GetInsertBlock().Parent()
-		condBlock := ctx.llvm_context.AddBasicBlock(parent, "while.cond")
-		bodyBlock := ctx.llvm_context.AddBasicBlock(parent, "while.body")
-		endBlock := ctx.llvm_context.AddBasicBlock(parent, "while.end")
-		ctx.builder.CreateBr(condBlock)
-		ctx.builder.SetInsertPointAtEnd(condBlock)
+		parent := ctx.current_func
+		condBlock := parent.NewBlock("while.cond")
+		bodyBlock := parent.NewBlock("while.body")
+		endBlock := parent.NewBlock("while.end")
+		ctx.builder.NewBr(condBlock)
+		ctx.builder = condBlock
 		cond := compileExpr(s.Condition, ctx)
-		ctx.builder.CreateCondBr(cond, bodyBlock, endBlock)
-		ctx.builder.SetInsertPointAtEnd(bodyBlock)
+		ctx.builder.NewCondBr(cond, bodyBlock, endBlock)
+		ctx.builder = bodyBlock
 		for _, stmt := range s.Body.Statements {
 			compileStmt(stmt, ctx)
 		}
-		ctx.builder.CreateBr(condBlock)
-		ctx.builder.SetInsertPointAtEnd(endBlock)
+		ctx.builder.NewBr(condBlock)
+		ctx.builder = endBlock
 	case *parser.Repeat:
 		// Not implemented: repeat
 	case *parser.For:
@@ -70,12 +71,19 @@ func compileStmt(stmt parser.Statement, ctx *CompilerContext) {
 		}
 	case *parser.Return:
 		if s.Value != nil {
-			value := compileExpr(s.Value, ctx)
-			ctx.builder.CreateRet(value)
+			val := compileExpr(s.Value, ctx)
+			ctx.builder.NewRet(val)
 		} else {
-			ctx.builder.CreateRet(llvm.ConstInt(ctx.llvm_context.Int32Type(), 0, false))
+			ctx.builder.NewRet(constant.NewInt(types.I32, 0))
 		}
 	case *parser.Import:
-		// Imports handled in analysis
+		// Handle imports by making symbols available
+		moduleName := s.Name.Value
+		if s.As != nil && s.As.Value != "" {
+			moduleName = s.As.Value
+		}
+		// Create a dummy value for the module symbol
+		dummyValue := constant.NewInt(types.I32, 0)
+		ctx.SetSymbol(moduleName, dummyValue)
 	}
 }

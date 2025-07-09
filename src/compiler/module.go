@@ -3,41 +3,32 @@ package compiler
 import (
 	"strings"
 
-	"tinygo.org/x/go-llvm"
+	"github.com/llir/llvm/ir"
 )
 
 type Module struct {
-	irModule          llvm.Module
-	context           llvm.Context
+	irModule          *ir.Module
 	optimizationLevel string
 }
 
-func NewModule() *Module {
-	context := llvm.NewContext()
-	module := context.NewModule("aether_module")
+func NewModule(moduleName string) *Module {
+	module := ir.NewModule()
 	return &Module{
 		irModule:          module,
-		context:           context,
 		optimizationLevel: "default<O2>",
 	}
 }
 
-func NewModuleWithOptimization(optimizationLevel string) *Module {
-	context := llvm.NewContext()
-	module := context.NewModule("aether_module")
+func NewModuleWithOptimization(moduleName string, optimizationLevel string) *Module {
+	module := ir.NewModule()
 	return &Module{
 		irModule:          module,
-		context:           context,
 		optimizationLevel: optimizationLevel,
 	}
 }
 
-func (m *Module) IR() llvm.Module {
+func (m *Module) IR() *ir.Module {
 	return m.irModule
-}
-
-func (m *Module) Context() llvm.Context {
-	return m.context
 }
 
 func (m *Module) SetOptimizationLevel(level string) {
@@ -53,15 +44,9 @@ func (m *Module) ApplyOptimizations() {
 		return
 	}
 
-	passManager := llvm.NewPassManager()
-	defer passManager.Dispose()
-
-	passManager.AddInstructionCombiningPass()
-	passManager.AddReassociatePass()
-	passManager.AddGVNPass()
-	passManager.AddCFGSimplificationPass()
-
-	passManager.Run(m.irModule)
+	// Note: llir/llvm doesn't have built-in optimization passes like the C API
+	// You would need to use a separate tool like 'opt' to apply optimizations
+	// For now, we'll just return without doing anything
 }
 
 func (m *Module) String() string {
@@ -69,6 +54,5 @@ func (m *Module) String() string {
 }
 
 func (m *Module) Dispose() {
-	m.irModule.Dispose()
-	m.context.Dispose()
+	// llir/llvm handles memory management automatically
 }

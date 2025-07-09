@@ -1,9 +1,9 @@
 ifeq ($(OS),Windows_NT)
-BIN=bin/aether2.exe
+BIN=build/bin/aether2.exe
 else
-BIN=bin/aether2
+BIN=build/bin/aether2
 endif
-SRC=bin
+SRC=cmd/aether2
 GO_LLVM_DIR=tools/go-llvm
 
 .PHONY: build clean deps

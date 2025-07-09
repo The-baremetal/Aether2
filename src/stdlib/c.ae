@@ -1,0 +1,17 @@
+// C binding module for Aether
+// This module provides bindings to C standard library functions
+
+func bind(funcName, returnType, ...paramTypes) {
+    return func(...args) {
+        return c_call(funcName, returnType, paramTypes, args)
+    }
+}
+
+printf = bind("printf", "int", "string", "variadic")
+puts = bind("puts", "int", "string")
+malloc = bind("malloc", "pointer", "int")
+free = bind("free", "void", "pointer")
+strlen = bind("strlen", "int", "string")
+sin = bind("sin", "double", "double")
+cos = bind("cos", "double", "double")
+sqrt = bind("sqrt", "double", "double") 

@@ -1,5 +1,12 @@
 package compiler
 
+import (
+	"github.com/llir/llvm/ir/constant"
+	"github.com/llir/llvm/ir/types"
+)
+
 func createMainReturn(ctx *CompilerContext) {
-	ctx.builder.CreateRet(ctx.llvm_context.ConstInt(ctx.llvm_context.Int32Type(), 0, false))
+	if ctx.builder != nil {
+		ctx.builder.NewRet(constant.NewInt(types.I32, 0))
+	}
 }

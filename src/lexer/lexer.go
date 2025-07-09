@@ -57,8 +57,14 @@ func (l *Lexer) NextToken() Token {
 		tok = l.newToken(ASTERISK, string(l.Ch))
 	case '/':
 		if l.peekChar() == '/' {
-			l.skipLineComment()
-			return l.NextToken()
+			if l.peekAhead(2) == '/' {
+				l.skipDocComment()
+				return l.NextToken()
+			} else {
+				tok.Type = C_COMMENT
+				tok.Literal = l.readCComment()
+				return tok
+			}
 		} else if l.peekChar() == '*' {
 			l.skipBlockComment()
 			return l.NextToken()
@@ -160,11 +166,13 @@ func (l *Lexer) skipWhitespaceAndComments() {
 		if l.Ch == ' ' || l.Ch == '\t' || l.Ch == '\r' || l.Ch == '\n' {
 			l.readChar()
 		} else if l.Ch == '/' && l.peekChar() == '/' {
-			l.skipLineComment()
+			if l.peekAhead(2) == '/' {
+				l.skipDocComment()
+			} else {
+				break
+			}
 		} else if l.Ch == '/' && l.peekChar() == '*' {
 			l.skipBlockComment()
-		} else if l.Ch == '/' && l.peekChar() == '/' && l.peekAhead(2) == '/' {
-			l.skipDocComment()
 		} else {
 			break
 		}
@@ -232,6 +240,16 @@ func (l *Lexer) readString() string {
 	s := l.Input[pos:l.Position]
 	l.readChar()
 	return s
+}
+
+func (l *Lexer) readCComment() string {
+	l.readChar()
+	l.readChar()
+	pos := l.Position
+	for l.Ch != '\n' && l.Ch != 0 {
+		l.readChar()
+	}
+	return l.Input[pos:l.Position]
 }
 
 func isLetter(ch byte) bool {

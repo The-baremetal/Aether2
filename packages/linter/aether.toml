@@ -1,0 +1,4 @@
+name = "linter"
+version = "0.1.0"
+description = "Aether linter for casing, style, and more."
+dependencies = [] 

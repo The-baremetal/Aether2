@@ -1,31 +1,31 @@
 package compiler
 
-import "tinygo.org/x/go-llvm"
+import "github.com/llir/llvm/ir/types"
 
-func I32(context llvm.Context) llvm.Type {
-	return context.Int32Type()
+func I32() types.Type {
+	return types.I32
 }
 
-func I1(context llvm.Context) llvm.Type {
-	return context.Int1Type()
+func I1() types.Type {
+	return types.I1
 }
 
-func Void(context llvm.Context) llvm.Type {
-	return context.VoidType()
+func Void() types.Type {
+	return types.Void
 }
 
-func I8(context llvm.Context) llvm.Type {
-	return context.Int8Type()
+func I8() types.Type {
+	return types.I8
 }
 
-func I64(context llvm.Context) llvm.Type {
-	return context.Int64Type()
+func I64() types.Type {
+	return types.I64
 }
 
-func Float(context llvm.Context) llvm.Type {
-	return context.FloatType()
+func Float() types.Type {
+	return types.Float
 }
 
-func Double(context llvm.Context) llvm.Type {
-	return context.DoubleType()
+func Double() types.Type {
+	return types.Double
 }

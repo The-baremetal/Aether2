@@ -1,5 +1,7 @@
 package utils
 
+import "fmt"
+
 type ErrorKind int
 
 const (
@@ -17,10 +19,12 @@ type ParseError struct {
 	Message       string
 	Line          int
 	Column        int
+	File          string
 	Snippet       string // The line of code where the error occurred
 	Caret         int    // The column for the caret (if different from Column)
 	Fix           string // Suggested fix, if any
 	CodemodPrompt string // Prompt for codemod, if any
+	SpecReference string // Reference to the spec section, if any
 }
 
 type ParseErrorList struct {
@@ -44,5 +48,74 @@ func (l *ParseErrorList) ToMessages() []string {
 }
 
 func ErrorMessage(err ParseError) string {
-	return UserErrorMessage(err)
+	return FormatErrorWithContext(err)
+}
+
+func UserFriendlyTokenName(tokenType string, literal string) string {
+	switch tokenType {
+	case "RPAREN":
+		return ")"
+	case "LPAREN":
+		return "("
+	case "LBRACE":
+		return "{"
+	case "RBRACE":
+		return "}"
+	case "LBRACKET":
+		return "["
+	case "RBRACKET":
+		return "]"
+	case "IDENT":
+		return literal
+	case "SEMICOLON":
+		return ";"
+	case "COMMA":
+		return ","
+	case "DOT":
+		return "."
+	case "COLON":
+		return ":"
+	case "ASSIGN":
+		return "="
+	case "PLUS":
+		return "+"
+	case "MINUS":
+		return "-"
+	case "ASTERISK":
+		return "*"
+	case "SLASH":
+		return "/"
+	case "PERCENT":
+		return "%"
+	case "CARET":
+		return "^"
+	case "BANG":
+		return "!"
+	case "LT":
+		return "<"
+	case "GT":
+		return ">"
+	case "EQ":
+		return "=="
+	case "NOT_EQ":
+		return "!="
+	case "LT_EQ":
+		return "<="
+	case "GT_EQ":
+		return ">="
+	case "AND":
+		return "&&"
+	case "OR":
+		return "||"
+	case "VARARG":
+		return "..."
+	default:
+		return tokenType
+	}
+}
+
+func FormatTokenError(expected string, got string, gotLiteral string) string {
+	expectedFriendly := UserFriendlyTokenName(expected, "")
+	gotFriendly := UserFriendlyTokenName(got, gotLiteral)
+	return fmt.Sprintf("expected %s, got %s", expectedFriendly, gotFriendly)
 }
