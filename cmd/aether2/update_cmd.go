@@ -64,7 +64,17 @@ func getCurrentVersion() string {
 }
 
 func getLatestRelease(mirror string, wantNightly bool) (string, string) {
-	api := mirror + "/releases"
+	ownerRepo := ""
+	if strings.HasPrefix(mirror, "https://github.com/") {
+		parts := strings.Split(strings.TrimPrefix(mirror, "https://github.com/"), "/")
+		if len(parts) >= 2 {
+			ownerRepo = parts[0] + "/" + parts[1]
+		}
+	}
+	if ownerRepo == "" {
+		return "", ""
+	}
+	api := "https://api.github.com/repos/" + ownerRepo + "/releases"
 	resp, err := http.Get(api)
 	if err != nil {
 		return "", ""

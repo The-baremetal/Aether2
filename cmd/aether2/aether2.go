@@ -73,6 +73,7 @@ func main() {
 	rootCmd.AddCommand(DepsCmd)
 	rootCmd.AddCommand(ScaffoldCmd)
 	rootCmd.AddCommand(LintCmd)
+	rootCmd.AddCommand(UpdateCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
