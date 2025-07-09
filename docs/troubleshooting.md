@@ -7,61 +7,76 @@ Having trouble with Aether? This guide covers the most common issues and their s
 ## 🍕 Build Issues
 
 ### "Command not found: aether"
+
 **Problem:** The `aether` command isn't recognized.
 
 **Solutions:**
+
 1. **Check if Aether is installed:**
+
    ```bash
    which aether
    ```
 
 2. **Add to PATH if needed:**
+
    ```bash
    export PATH=$PATH:/path/to/aether/bin
    ```
 
 3. **Install Aether properly:**
+
    ```bash
-   go install github.com/your-repo/aether@latest
+   go install github.com/The-baremetal/Aether2@latest
    ```
 
 ### "Cannot find module"
+
 **Problem:** Module resolution fails.
 
 **Solutions:**
+
 1. **Check your `aether.toml`:**
+
    ```toml
    [dependencies]
    stdlib = "0.1.0"
    ```
 
 2. **Update dependencies:**
+
    ```bash
    aether dep update
    ```
 
 3. **Clear cache and rebuild:**
+
    ```bash
    rm -rf .aether
    aether build
    ```
 
 ### "Import error: module not found"
+
 **Problem:** Can't import a module.
 
 **Solutions:**
+
 1. **Check module name spelling:**
+
    ```aether
    import stdlib  # ✅ Correct
    import "stdlib"  # ❌ Wrong
    ```
 
 2. **Verify module exists:**
+
    ```bash
    ls src/stdlib/
    ```
 
 3. **Check import path:**
+
    ```aether
    import my_module  # For src/my_module.ae
    ```
@@ -71,9 +86,11 @@ Having trouble with Aether? This guide covers the most common issues and their s
 ## 🍕 Compilation Errors
 
 ### "Unexpected token" Errors
+
 **Problem:** Parser can't understand your syntax.
 
 **Common fixes:**
+
 ```aether
 // ❌ Wrong
 for x (array) { ... }
@@ -99,10 +116,13 @@ import stdlib
 ```
 
 ### "Unexpected EOF" Errors
+
 **Problem:** Missing closing characters.
 
 **Solutions:**
+
 1. **Check for missing braces:**
+
    ```aether
    func add(a, b) {
      return a + b

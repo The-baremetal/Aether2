@@ -427,6 +427,7 @@ nums.map({
 ## 🍕 Varargs and Spread Arguments
 
 ### Function Parameter Lists (Declarations)
+
 - You can use a single vararg (e.g., `...args`) in a function parameter list.
 - The vararg must be the last parameter. You cannot have parameters after a vararg.
 - Only one vararg is allowed per parameter list.
@@ -441,6 +442,7 @@ func printAll(a, b, ...args) {
 If you try to put a vararg anywhere but the end, or use more than one, the compiler will throw a pizza at you (syntax error)!
 
 ### Function Call Argument Lists
+
 - You can use as many spreads as you want, anywhere in the argument list.
 - Each spread can be a named variable (e.g., `...args`, `...flags`) or just `...` (spread all remaining arguments, if supported).
 - Example:

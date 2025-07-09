@@ -8,7 +8,7 @@ Welcome to the ultimate debugging guide for Aether! This guide will help you und
 
 Every Aether error follows this format:
 
-```
+```bash
 🍕 SyntaxError: Unexpected token at line 2, column 1: expected IN, got ILLEGAL
     for x (something) { ... }
     ^
@@ -16,6 +16,7 @@ Every Aether error follows this format:
 ```
 
 **What each part means:**
+
 - **🍕 Emoji:** Error type (🍕 for syntax, 🚨 for warnings, etc.)
 - **Error Type:** SyntaxError, TypeError, etc.
 - **Location:** Line and column where the error occurred
