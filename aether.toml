@@ -1,0 +1,6 @@
+[project]
+name = "aether"
+version = "0.1.0"
+
+[dependencies]
+depmod = "lib/core/depmod.ae"
