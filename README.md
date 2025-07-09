@@ -7,6 +7,13 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/The-baremetal/Aether2)](https://github.com/The-baremetal/Aether2/graphs/contributors)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/The-baremetal/Aether2)](https://github.com/The-baremetal/Aether2/commits)
 
+** Notice: AetherC has absolutely no association from the above **
+- **Youtubers**
+- **People**
+- **Corporations and trademarks before and after Aether**
+- **Any governmental or trademarked asset**
+- **Any other unrelated project except projects in this organisation or website**
+
 ## Get started
 - [Read documentation 📖](https://github.com/The-baremetal/Aether2/blob/main/docs)
 - [Join the wiki 📚](https://github.com/The-baremetal/Aether2/wiki)
