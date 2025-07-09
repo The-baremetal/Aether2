@@ -64,7 +64,7 @@ On Windows, use Chocolatey or Scoop, or install manually as described above.
 2. Build using Make:
 
    ```bash
-   make
+   make build
    ```
 
    ```bash
@@ -86,7 +86,7 @@ go test ./...
 Or use the Aether CLI:
 
 ```bash
-./aether2 --version
+./build/bin/aether2 --version
 ```
 
 ## Updating Aether
