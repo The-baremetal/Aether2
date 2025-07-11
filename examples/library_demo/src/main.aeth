@@ -1,0 +1,44 @@
+// Main program that uses the math library
+import "mathlib" as math
+
+func main() {
+  print("Math Library Demo!")
+  
+  // Test basic operations
+  result = math.Add(5, 3)
+  print("5 + 3 =", result)
+  
+  result = math.Subtract(10, 4)
+  print("10 - 4 =", result)
+  
+  result = math.Multiply(6, 7)
+  print("6 * 7 =", result)
+  
+  result = math.Divide(20, 5)
+  print("20 / 5 =", result)
+  
+  // Test advanced operations
+  result = math.Power(2, 8)
+  print("2^8 =", result)
+  
+  result = math.SquareRoot(16)
+  print("sqrt(16) =", result)
+  
+  result = math.Factorial(5)
+  print("5! =", result)
+  
+  // Test prime checking
+  if math.IsPrime(17) {
+    print("17 is prime!")
+  } else {
+    print("17 is not prime!")
+  }
+  
+  if math.IsPrime(25) {
+    print("25 is prime!")
+  } else {
+    print("25 is not prime!")
+  }
+}
+
+main() 

@@ -1,3 +1,5 @@
+# aether.lock - DO NOT EDIT
 [dependencies]
-  [dependencies.depmod]
-    path = "lib/core/depmod.ae"
+stdlib = "/mnt/d/Programs/Programmed/aether2/packages/stdlib"
+utils = "/mnt/d/Programs/Programmed/aether2/packages/utils"
+c = "/mnt/d/Programs/Programmed/aether2/packages/c"

@@ -70,6 +70,14 @@ func compileExpr(expr parser.Expression, ctx *CompilerContext) value.Value {
 			}
 		}
 		return ctx.builder.NewExtractValue(obj, 0)
+	case *parser.ArrayIndex:
+		array := compileExpr(e.Array, ctx)
+		index := compileExpr(e.Index, ctx)
+		if array == nil || index == nil {
+			return nil
+		}
+		// For now, return the array itself - proper array indexing will need more complex LLVM code
+		return array
 	case *parser.PartialApplication:
 		fn := compileExpr(e.Function, ctx)
 		args := make([]value.Value, len(e.Args))
@@ -77,6 +85,12 @@ func compileExpr(expr parser.Expression, ctx *CompilerContext) value.Value {
 			args[i] = compileExpr(arg, ctx)
 		}
 		return ctx.builder.NewCall(fn, args...)
+	case *parser.StructInstantiation:
+		// TODO: Proper struct codegen. For now, return a dummy value.
+		return constant.NewInt(types.I32, 42)
+	case *parser.Block:
+		// TODO: Proper lambda/block codegen. For now, return a dummy value.
+		return constant.NewInt(types.I32, 99)
 	}
 	return nil
 }
@@ -117,4 +131,11 @@ func getOrCreatePrintfFunction(ctx *CompilerContext) *ir.Func {
 	printfFunc := ctx.module.NewFunc("printf", types.I32, ir.NewParam("format", types.NewPointer(types.I8)))
 	printfFunc.Sig.Variadic = true
 	return printfFunc
+}
+
+func isStdlibFunction(name string) bool {
+	// Stdlib functions are now imported from packages
+	// This function is kept for backward compatibility but always returns false
+	// The real stdlib functions are in packages/stdlib/*.ae files
+	return false
 }

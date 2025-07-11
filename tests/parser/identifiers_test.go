@@ -15,8 +15,8 @@ func TestParseIdentifier(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *Assignment node, got %T", ast.Statements[0])
 	}
-	if assign.Name.Value != "foo" {
-		t.Errorf("expected identifier 'foo', got %s", assign.Name.Value)
+	if len(assign.Names) != 1 || assign.Names[0].Value != "foo" {
+		t.Errorf("expected identifier 'foo', got %v", assign.Names)
 	}
 }
 

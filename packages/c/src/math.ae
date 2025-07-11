@@ -1,0 +1,246 @@
+// C math.h bindings
+// #include <math.h>
+
+func sqrt(x) {
+    return c_sqrt(x)
+}
+
+func cbrt(x) {
+    return c_cbrt(x)
+}
+
+func pow(x, y) {
+    return c_pow(x, y)
+}
+
+func exp(x) {
+    return c_exp(x)
+}
+
+func exp2(x) {
+    return c_exp2(x)
+}
+
+func expm1(x) {
+    return c_expm1(x)
+}
+
+func log(x) {
+    return c_log(x)
+}
+
+func log10(x) {
+    return c_log10(x)
+}
+
+func log2(x) {
+    return c_log2(x)
+}
+
+func log1p(x) {
+    return c_log1p(x)
+}
+
+func sin(x) {
+    return c_sin(x)
+}
+
+func cos(x) {
+    return c_cos(x)
+}
+
+func tan(x) {
+    return c_tan(x)
+}
+
+func asin(x) {
+    return c_asin(x)
+}
+
+func acos(x) {
+    return c_acos(x)
+}
+
+func atan(x) {
+    return c_atan(x)
+}
+
+func atan2(y, x) {
+    return c_atan2(y, x)
+}
+
+func sinh(x) {
+    return c_sinh(x)
+}
+
+func cosh(x) {
+    return c_cosh(x)
+}
+
+func tanh(x) {
+    return c_tanh(x)
+}
+
+func asinh(x) {
+    return c_asinh(x)
+}
+
+func acosh(x) {
+    return c_acosh(x)
+}
+
+func atanh(x) {
+    return c_atanh(x)
+}
+
+func floor(x) {
+    return c_floor(x)
+}
+
+func ceil(x) {
+    return c_ceil(x)
+}
+
+func trunc(x) {
+    return c_trunc(x)
+}
+
+func round(x) {
+    return c_round(x)
+}
+
+func lround(x) {
+    return c_lround(x)
+}
+
+func llround(x) {
+    return c_llround(x)
+}
+
+func nearbyint(x) {
+    return c_nearbyint(x)
+}
+
+func rint(x) {
+    return c_rint(x)
+}
+
+func lrint(x) {
+    return c_lrint(x)
+}
+
+func llrint(x) {
+    return c_llrint(x)
+}
+
+func fmod(x, y) {
+    return c_fmod(x, y)
+}
+
+func remainder(x, y) {
+    return c_remainder(x, y)
+}
+
+func remquo(x, y, quo) {
+    return c_remquo(x, y, quo)
+}
+
+func copysign(x, y) {
+    return c_copysign(x, y)
+}
+
+func nan(tagp) {
+    return c_nan(tagp)
+}
+
+func nextafter(x, y) {
+    return c_nextafter(x, y)
+}
+
+func nexttoward(x, y) {
+    return c_nexttoward(x, y)
+}
+
+func fdim(x, y) {
+    return c_fdim(x, y)
+}
+
+func fmax(x, y) {
+    return c_fmax(x, y)
+}
+
+func fmin(x, y) {
+    return c_fmin(x, y)
+}
+
+func fabs(x) {
+    return c_fabs(x)
+}
+
+func cabs(z) {
+    return c_cabs(z)
+}
+
+func hypot(x, y) {
+    return c_hypot(x, y)
+}
+
+func erf(x) {
+    return c_erf(x)
+}
+
+func erfc(x) {
+    return c_erfc(x)
+}
+
+func tgamma(x) {
+    return c_tgamma(x)
+}
+
+func lgamma(x) {
+    return c_lgamma(x)
+}
+
+func isfinite(x) {
+    return c_isfinite(x)
+}
+
+func isinf(x) {
+    return c_isinf(x)
+}
+
+func isnan(x) {
+    return c_isnan(x)
+}
+
+func isnormal(x) {
+    return c_isnormal(x)
+}
+
+func signbit(x) {
+    return c_signbit(x)
+}
+
+func isgreater(x, y) {
+    return c_isgreater(x, y)
+}
+
+func isgreaterequal(x, y) {
+    return c_isgreaterequal(x, y)
+}
+
+func isless(x, y) {
+    return c_isless(x, y)
+}
+
+func islessequal(x, y) {
+    return c_islessequal(x, y)
+}
+
+func islessgreater(x, y) {
+    return c_islessgreater(x, y)
+}
+
+func isunordered(x, y) {
+    return c_isunordered(x, y)
+} 

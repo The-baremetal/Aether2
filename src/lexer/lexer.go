@@ -7,6 +7,7 @@ type Lexer struct {
 	Ch           byte
 	Line         int
 	Column       int
+	tokenBuffer  []Token // buffer for peeking tokens
 }
 
 func NewLexer(input string) *Lexer {
@@ -39,6 +40,11 @@ func (l *Lexer) peekChar() byte {
 }
 
 func (l *Lexer) NextToken() Token {
+	if len(l.tokenBuffer) > 0 {
+		tok := l.tokenBuffer[0]
+		l.tokenBuffer = l.tokenBuffer[1:]
+		return tok
+	}
 	l.skipWhitespaceAndComments()
 	tok := Token{Line: l.Line, Column: l.Column}
 	switch l.Ch {
@@ -132,6 +138,11 @@ func (l *Lexer) NextToken() Token {
 		tok.Type = EOF
 		tok.Literal = ""
 	default:
+		if l.Ch == '_' {
+			tok = l.newToken(UNDERSCORE, "_")
+			l.readChar()
+			return tok
+		}
 		if isLetter(l.Ch) {
 			ident := l.readIdentifier()
 			if ident == "as" {
@@ -270,4 +281,139 @@ func (l *Lexer) Tokenize() []Token {
 		}
 	}
 	return tokens
+}
+
+// PeekToken returns the nth token ahead (1 = next, 2 = after next, etc.) without advancing the lexer state.
+func (l *Lexer) PeekToken(n int) Token {
+	// Fill the buffer up to n tokens
+	for len(l.tokenBuffer) < n {
+		tok := l.nextTokenInternal()
+		l.tokenBuffer = append(l.tokenBuffer, tok)
+	}
+	return l.tokenBuffer[n-1]
+}
+
+// nextTokenInternal is the original NextToken logic, but does not use or modify the buffer.
+func (l *Lexer) nextTokenInternal() Token {
+	l.skipWhitespaceAndComments()
+	tok := Token{Line: l.Line, Column: l.Column}
+	switch l.Ch {
+	case '=':
+		if l.peekChar() == '=' {
+			l.readChar()
+			tok = l.newToken(EQ, "==")
+		} else {
+			tok = l.newToken(ASSIGN, string(l.Ch))
+		}
+	case '+':
+		tok = l.newToken(PLUS, string(l.Ch))
+	case '-':
+		tok = l.newToken(MINUS, string(l.Ch))
+	case '*':
+		tok = l.newToken(ASTERISK, string(l.Ch))
+	case '/':
+		if l.peekChar() == '/' {
+			if l.peekAhead(2) == '/' {
+				l.skipDocComment()
+				return l.nextTokenInternal()
+			} else {
+				tok.Type = C_COMMENT
+				tok.Literal = l.readCComment()
+				return tok
+			}
+		} else if l.peekChar() == '*' {
+			l.skipBlockComment()
+			return l.nextTokenInternal()
+		} else {
+			tok = l.newToken(SLASH, string(l.Ch))
+		}
+	case '%':
+		tok = l.newToken(MODULO, string(l.Ch))
+	case '^':
+		tok = l.newToken(EXPONENT, string(l.Ch))
+	case '<':
+		if l.peekChar() == '=' {
+			l.readChar()
+			tok = l.newToken(LE, "<=")
+		} else {
+			tok = l.newToken(LT, string(l.Ch))
+		}
+	case '>':
+		if l.peekChar() == '=' {
+			l.readChar()
+			tok = l.newToken(GE, ">=")
+		} else {
+			tok = l.newToken(GT, string(l.Ch))
+		}
+	case '!':
+		if l.peekChar() == '=' {
+			l.readChar()
+			tok = l.newToken(NOT_EQ, "!=")
+		} else {
+			tok = l.newToken(ILLEGAL, string(l.Ch))
+		}
+	case ',':
+		tok = l.newToken(COMMA, string(l.Ch))
+	case ':':
+		tok = l.newToken(COLON, string(l.Ch))
+	case '[':
+		tok = l.newToken(LBRACKET, string(l.Ch))
+	case ']':
+		tok = l.newToken(RBRACKET, string(l.Ch))
+	case '.':
+		if l.peekChar() == '.' {
+			l.readChar()
+			if l.peekChar() == '.' {
+				l.readChar()
+				tok = l.newToken(VARARG, "...")
+			} else {
+				tok = l.newToken(CONCAT, "..")
+			}
+		} else {
+			tok = l.newToken(DOT, string(l.Ch))
+		}
+	case '(':
+		tok = l.newToken(LPAREN, string(l.Ch))
+	case ')':
+		tok = l.newToken(RPAREN, string(l.Ch))
+	case '{':
+		tok = l.newToken(LBRACE, string(l.Ch))
+	case '}':
+		tok = l.newToken(RBRACE, string(l.Ch))
+	case '"':
+		tok.Type = STRING
+		tok.Literal = l.readString()
+		return tok
+	case 0:
+		tok.Type = EOF
+		tok.Literal = ""
+	default:
+		if l.Ch == '_' {
+			tok = l.newToken(UNDERSCORE, "_")
+			l.readChar()
+			return tok
+		}
+		if isLetter(l.Ch) {
+			ident := l.readIdentifier()
+			if ident == "as" {
+				tok.Type = AS
+				tok.Literal = ident
+			} else if KEYWORDS[ident] != "" {
+				tok.Type = KEYWORDS[ident]
+				tok.Literal = ident
+			} else {
+				tok.Type = IDENT
+				tok.Literal = ident
+			}
+			return tok
+		} else if isDigit(l.Ch) {
+			tok.Type = NUMBER
+			tok.Literal = l.readNumber()
+			return tok
+		} else {
+			tok = l.newToken(ILLEGAL, string(l.Ch))
+		}
+	}
+	l.readChar()
+	return tok
 }

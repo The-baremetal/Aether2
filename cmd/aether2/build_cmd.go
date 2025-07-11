@@ -1,6 +1,7 @@
 package main
 
 import (
+	"aether/src/analysis"
 	"aether/src/compiler"
 	"aether/src/lexer"
 	"aether/src/parser"
@@ -13,8 +14,95 @@ import (
 
 	"aether/lib/utils"
 
+	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
 )
+
+// Project configuration structure
+type ProjectConfig struct {
+	Project struct {
+		Name        string `toml:"name"`
+		Version     string `toml:"version"`
+		Author      string `toml:"author,omitempty"`
+		Description string `toml:"description,omitempty"`
+	} `toml:"project"`
+
+	Build struct {
+		SourceDirectories []string `toml:"source_directories,omitempty"`
+		OutputDirectory   string   `toml:"output_directory,omitempty"`
+		Target            string   `toml:"target,omitempty"`
+		Optimization      string   `toml:"optimization,omitempty"`
+		Linker            string   `toml:"linker,omitempty"`
+		CreateLibrary     bool     `toml:"create_library,omitempty"`
+		LibraryType       string   `toml:"library_type,omitempty"`
+	} `toml:"build"`
+
+	Dependencies map[string]string `toml:"dependencies,omitempty"`
+
+	DevDependencies map[string]string `toml:"dev-dependencies,omitempty"`
+}
+
+func loadProjectConfig(projectRoot string) ProjectConfig {
+	configPath := filepath.Join(projectRoot, "aether.toml")
+
+	var config ProjectConfig
+
+	// Set defaults
+	config.Project.Name = "aether-project"
+	config.Project.Version = "0.1.0"
+	config.Build.SourceDirectories = []string{"src", "."}
+	config.Build.OutputDirectory = "bin"
+	config.Build.Target = "native"
+	config.Build.Optimization = "debug"
+	config.Build.Linker = "mold"
+
+	// Try to read aether.toml
+	if data, err := os.ReadFile(configPath); err == nil {
+		if err := toml.Unmarshal(data, &config); err != nil {
+			if !buildFlags.quiet {
+				fmt.Printf("Warning: Failed to parse aether.toml: %v\n", err)
+			}
+		}
+	} else {
+		if !buildFlags.quiet {
+			fmt.Printf("Warning: No aether.toml found, using defaults\n")
+		}
+	}
+
+	return config
+}
+
+func parseTarget(target string) (string, string) {
+	switch target {
+	case "native":
+		return runtime.GOOS, runtime.GOARCH
+	case "linux":
+		return "linux", runtime.GOARCH
+	case "windows":
+		return "windows", runtime.GOARCH
+	case "darwin":
+		return "darwin", runtime.GOARCH
+	case "linux-amd64":
+		return "linux", "amd64"
+	case "linux-arm64":
+		return "linux", "arm64"
+	case "windows-amd64":
+		return "windows", "amd64"
+	case "darwin-amd64":
+		return "darwin", "amd64"
+	case "darwin-arm64":
+		return "darwin", "arm64"
+	default:
+		// Try to parse target like "linux-amd64"
+		if strings.Contains(target, "-") {
+			parts := strings.Split(target, "-")
+			if len(parts) == 2 {
+				return parts[0], parts[1]
+			}
+		}
+		return runtime.GOOS, runtime.GOARCH
+	}
+}
 
 var (
 	buildFlags struct {
@@ -90,7 +178,21 @@ var (
 		demangle       bool
 		help           bool
 		version        bool
+		// New library-specific flags
+		createLibrary      bool
+		libraryType        string // "shared", "static", "both"
+		libraryName        string
+		libraryVersion     string
+		exportSymbols      bool
+		generatePkgConfig  bool
+		libraryDescription string
+		libraryURL         string
+		libraryRequires    string
+		libraryConflicts   string
+		libraryProvides    string
 	}
+
+	projectConfig ProjectConfig
 )
 
 // Add helper to find project root (where aether.toml lives)
@@ -131,12 +233,55 @@ func doBuild(args []string) {
 	if len(args) == 0 {
 		// No arguments - build current directory
 		buildDir = "."
-		files, err := findAeFiles("src")
+		projectRoot = findProjectRoot(".")
+
+		// Load project configuration from aether.toml
+		config := loadProjectConfig(projectRoot)
+
+		// Try to find Aether files based on configuration
+		var files []string
+		var err error
+
+		// Use configured source directory or fall back to defaults
+		sourceDirs := config.Build.SourceDirectories
+		if len(sourceDirs) == 0 {
+			sourceDirs = []string{"src", "."}
+		}
+
+		for _, sourceDir := range sourceDirs {
+			files, err = analysis.FindAetherFiles(sourceDir)
+			if err == nil && len(files) > 0 {
+				if !buildFlags.quiet {
+					fmt.Printf("Found %d files in %s\n", len(files), sourceDir)
+				}
+				break
+			}
+		}
 		must(err)
 		filesToBuild = files
-		projectRoot = findProjectRoot(".")
+
+		// Apply configuration overrides
+		if config.Build.Target != "" {
+			buildFlags.targetOS, buildFlags.targetArch = parseTarget(config.Build.Target)
+		}
+		if config.Build.Optimization != "" {
+			buildFlags.optimization = config.Build.Optimization
+		}
+		if config.Build.Linker != "" {
+			buildFlags.linker = config.Build.Linker
+		}
+		if config.Build.CreateLibrary {
+			buildFlags.createLibrary = true
+		}
+		if config.Build.LibraryType != "" {
+			buildFlags.libraryType = config.Build.LibraryType
+		}
+
+		// Store config for later use
+		projectConfig = config
+
 		if !buildFlags.quiet {
-			fmt.Println("Building aether project in current directory.")
+			fmt.Printf("Building aether project '%s' v%s\n", config.Project.Name, config.Project.Version)
 		}
 	} else {
 		// Arguments provided - check if they're files or directories
@@ -149,7 +294,7 @@ func doBuild(args []string) {
 
 			if info.IsDir() {
 				// Directory - find all .ae files in it
-				files, err := findAeFiles(arg)
+				files, err := analysis.FindAetherFiles(arg)
 				must(err)
 				filesToBuild = append(filesToBuild, files...)
 				buildDir = arg
@@ -159,8 +304,8 @@ func doBuild(args []string) {
 				}
 			} else {
 				// File - add it to the list
-				if !strings.HasSuffix(arg, ".ae") {
-					fmt.Printf("Error: File '%s' is not an Aether file (.ae)\n", arg)
+				if !strings.HasSuffix(arg, ".aeth") {
+					fmt.Printf("Error: File '%s' is not an Aether file (.aeth)\n", arg)
 					os.Exit(1)
 				}
 				filesToBuild = append(filesToBuild, arg)
@@ -195,7 +340,7 @@ func doBuild(args []string) {
 		}
 
 		// Analyze dependencies
-		depAnalysis := compiler.AnalyzeDependencies(projectRoot)
+		depAnalysis := analysis.AnalyzeDependencies(projectRoot)
 		if !depAnalysis.Valid {
 			fmt.Println("Dependency analysis failed:")
 			summary := utils.GroupErrorsByFile(depAnalysis.Errors)
@@ -211,15 +356,15 @@ func doBuild(args []string) {
 		}
 
 		// Generate lock file if needed
-		if err := compiler.GenerateLockFile(projectRoot); err != nil {
+		if err := analysis.GenerateLockFile(projectRoot); err != nil {
 			fmt.Println("Failed to generate lock file:", err)
 			os.Exit(1)
 		}
 
-		imports, err := analyzeImports(filesToBuild)
+		imports, err := analysis.AnalyzeImports(filesToBuild)
 		must(err)
 
-		if detectCycles(imports) {
+		if len(analysis.DetectCycles(imports)) > 0 {
 			fmt.Println("Error: Circular imports detected")
 			os.Exit(1)
 		}
@@ -242,10 +387,10 @@ func doBuild(args []string) {
 		buildFlags.emitExe = true
 	}
 
-	imports, err := analyzeImports(filesToBuild)
+	imports, err := analysis.AnalyzeImports(filesToBuild)
 	must(err)
 
-	sortedFiles, err := topoSort(filesToBuild, imports)
+	sortedFiles, err := analysis.TopoSort(filesToBuild, imports)
 	must(err)
 
 	if !buildFlags.quiet {
@@ -345,10 +490,41 @@ func doBuild(args []string) {
 		}
 
 		output := buildFlags.outputName
+		if output == "bin/aether.out" && projectConfig.Build.OutputDirectory != "" {
+			// Use configured output directory
+			output = filepath.Join(projectConfig.Build.OutputDirectory, "aether.out")
+		}
 		linkObjectFiles(objectFiles, output)
 
 		if !buildFlags.quiet {
 			fmt.Println("Build complete! Executable at:", output)
+		}
+	}
+
+	// Library creation phase
+	if buildFlags.createLibrary && len(objectFiles) > 0 {
+		if !buildFlags.quiet {
+			fmt.Println("Creating library...")
+		}
+
+		outputBase := buildFlags.outputName
+		if outputBase == "bin/aether.out" {
+			if projectConfig.Build.OutputDirectory != "" {
+				outputBase = filepath.Join(projectConfig.Build.OutputDirectory, "aether")
+			} else {
+				outputBase = "lib/aether"
+			}
+		}
+
+		// Create the library
+		createLibrary(objectFiles, outputBase, buildFlags.libraryType)
+
+		// Generate pkg-config file if requested
+		libName := getLibraryName(outputBase)
+		generatePkgConfigFile(libName, outputBase)
+
+		if !buildFlags.quiet {
+			fmt.Println("Library creation complete!")
 		}
 	}
 }
@@ -476,6 +652,19 @@ func init() {
 	flags.BoolVar(&buildFlags.quiet, "quiet", false, "suppress output")
 	flags.BoolVar(&buildFlags.help, "help", false, "show help")
 	flags.BoolVar(&buildFlags.version, "version", false, "show version")
+
+	// New library-specific flags
+	flags.BoolVar(&buildFlags.createLibrary, "create-library", false, "create a new library (shared, static, or both)")
+	flags.StringVar(&buildFlags.libraryType, "library-type", "shared", "type of library to create (shared, static, both)")
+	flags.StringVar(&buildFlags.libraryName, "library-name", "", "name of the library to create")
+	flags.StringVar(&buildFlags.libraryVersion, "library-version", "", "version of the library to create")
+	flags.BoolVar(&buildFlags.exportSymbols, "export-symbols", false, "export all symbols from the library")
+	flags.BoolVar(&buildFlags.generatePkgConfig, "generate-pkg-config", false, "generate a pkg-config file for the library")
+	flags.StringVar(&buildFlags.libraryDescription, "library-description", "", "description for the library")
+	flags.StringVar(&buildFlags.libraryURL, "library-url", "", "URL for the library")
+	flags.StringVar(&buildFlags.libraryRequires, "library-requires", "", "libraries required by the library")
+	flags.StringVar(&buildFlags.libraryConflicts, "library-conflicts", "", "libraries conflicting with the library")
+	flags.StringVar(&buildFlags.libraryProvides, "library-provides", "", "libraries provided by the library")
 }
 
 func getOptimizationLevel() string {
@@ -702,11 +891,193 @@ func extractModuleSymbols(prog *parser.Program) map[string]interface{} {
 	symbols := make(map[string]interface{})
 	for _, stmt := range prog.Statements {
 		if assign, ok := stmt.(*parser.Assignment); ok {
-			if assign.Name.Value[0] >= 'A' && assign.Name.Value[0] <= 'Z' {
+			if len(assign.Names) > 0 && assign.Names[0].Value[0] >= 'A' && assign.Names[0].Value[0] <= 'Z' {
 				// This is an exported symbol
-				symbols[assign.Name.Value] = assign.Value
+				symbols[assign.Names[0].Value] = assign.Value
 			}
 		}
 	}
 	return symbols
+}
+
+// New library creation functions
+func createLibrary(objectFiles []string, outputBase string, libType string) {
+	switch libType {
+	case "shared":
+		createSharedLibrary(objectFiles, outputBase)
+	case "static":
+		createStaticLibrary(objectFiles, outputBase)
+	case "both":
+		createSharedLibrary(objectFiles, outputBase)
+		createStaticLibrary(objectFiles, outputBase)
+	default:
+		fmt.Printf("Error: Unknown library type '%s'\n", libType)
+		os.Exit(1)
+	}
+}
+
+func createSharedLibrary(objectFiles []string, outputBase string) {
+	libName := getLibraryName(outputBase)
+	outputFile := getSharedLibraryPath(libName)
+
+	args := append(objectFiles, "-o", outputFile)
+
+	// Add shared library specific flags
+	args = append(args, "-shared")
+
+	// Add position independent code
+	args = append(args, "-fPIC")
+
+	// Add soname if specified
+	if buildFlags.soname != "" {
+		args = append(args, "-soname", buildFlags.soname)
+	} else {
+		args = append(args, "-soname", libName)
+	}
+
+	// Add export symbols if requested
+	if buildFlags.exportSymbols {
+		args = append(args, "-export-dynamic")
+	}
+
+	// Use mold for fast linking
+	if buildFlags.fuseLd != "" {
+		args = append([]string{"-fuse-ld=" + buildFlags.fuseLd}, args...)
+	}
+
+	cmd := exec.Command(buildFlags.linker, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	must(cmd.Run())
+
+	if !buildFlags.quiet {
+		fmt.Printf("Created shared library: %s\n", outputFile)
+	}
+}
+
+func createStaticLibrary(objectFiles []string, outputBase string) {
+	libName := getLibraryName(outputBase)
+	outputFile := getStaticLibraryPath(libName)
+
+	// Create static library using ar
+	args := append([]string{"rcs", outputFile}, objectFiles...)
+	cmd := exec.Command("ar", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	must(cmd.Run())
+
+	if !buildFlags.quiet {
+		fmt.Printf("Created static library: %s\n", outputFile)
+	}
+}
+
+func generatePkgConfigFile(libName string, outputBase string) {
+	if !buildFlags.generatePkgConfig {
+		return
+	}
+
+	pcContent := generatePkgConfigContent(libName)
+	pcFile := getPkgConfigPath(libName)
+
+	must(os.WriteFile(pcFile, []byte(pcContent), 0644))
+
+	if !buildFlags.quiet {
+		fmt.Printf("Generated pkg-config file: %s\n", pcFile)
+	}
+}
+
+func generatePkgConfigContent(libName string) string {
+	version := buildFlags.libraryVersion
+	if version == "" {
+		version = "1.0.0"
+	}
+
+	description := buildFlags.libraryDescription
+	if description == "" {
+		description = fmt.Sprintf("Aether library %s", libName)
+	}
+
+	url := buildFlags.libraryURL
+	if url == "" {
+		url = "https://github.com/aether-lang"
+	}
+
+	requires := buildFlags.libraryRequires
+	conflicts := buildFlags.libraryConflicts
+	provides := buildFlags.libraryProvides
+
+	content := fmt.Sprintf(`prefix=%s
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: %s
+Description: %s
+Version: %s
+URL: %s
+`, getInstallPrefix(), libName, description, version, url)
+
+	if requires != "" {
+		content += fmt.Sprintf("Requires: %s\n", requires)
+	}
+
+	if conflicts != "" {
+		content += fmt.Sprintf("Conflicts: %s\n", conflicts)
+	}
+
+	if provides != "" {
+		content += fmt.Sprintf("Provides: %s\n", provides)
+	}
+
+	content += fmt.Sprintf(`
+Libs: -L${libdir} -l%s
+Cflags: -I${includedir}
+`, libName)
+
+	return content
+}
+
+func getLibraryName(outputBase string) string {
+	if buildFlags.libraryName != "" {
+		return buildFlags.libraryName
+	}
+	return filepath.Base(outputBase)
+}
+
+func getSharedLibraryPath(libName string) string {
+	ext := getSharedLibraryExtension()
+	return fmt.Sprintf("lib%s.%s", libName, ext)
+}
+
+func getStaticLibraryPath(libName string) string {
+	ext := getStaticLibraryExtension()
+	return fmt.Sprintf("lib%s.%s", libName, ext)
+}
+
+func getPkgConfigPath(libName string) string {
+	return fmt.Sprintf("%s.pc", libName)
+}
+
+func getSharedLibraryExtension() string {
+	switch buildFlags.targetOS {
+	case "windows":
+		return "dll"
+	case "darwin":
+		return "dylib"
+	default:
+		return "so"
+	}
+}
+
+func getStaticLibraryExtension() string {
+	switch buildFlags.targetOS {
+	case "windows":
+		return "lib"
+	default:
+		return "a"
+	}
+}
+
+func getInstallPrefix() string {
+	return "/usr/local"
 }

@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	analysis "aether/src/analysis"
 	"aether/src/parser"
 
 	"github.com/llir/llvm/ir/constant"
@@ -21,13 +22,11 @@ func CompileWithOptionsAndModules(prog *parser.Program, moduleName string, modul
 	defer ctx.Dispose()
 
 	ast := parser.ProgramToAST(prog)
-	analysisResult := AnalyzeAST(ast)
+	analysisResult := analysis.AnalyzeAST(ast)
 
 	for _, include := range analysisResult.CIncludes {
 		ctx.AddLibrary(include.Header)
 	}
-
-	// Set up module symbols
 	if moduleSymbols != nil {
 		for moduleName, symbols := range moduleSymbols {
 			moduleInfo := &ModuleInfo{
@@ -42,7 +41,6 @@ func CompileWithOptionsAndModules(prog *parser.Program, moduleName string, modul
 			ctx.SetModule(moduleName, moduleInfo)
 		}
 	}
-
 	if moduleName == "main" {
 		mainFn := createMainFunction(ctx)
 		entry := addEntryBlock(ctx, mainFn)

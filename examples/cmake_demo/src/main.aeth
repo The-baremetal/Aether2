@@ -1,0 +1,61 @@
+// Main program for CMake demo
+// Uses both mathlib and cryptolib
+
+import "mathlib" as math
+import "cryptolib" as crypto
+
+func main() {
+  print("🍕 Aether CMake Demo!")
+  print("=====================")
+  
+  // Test math library
+  print("\nMath Library Tests:")
+  result = math.Add(10, 5)
+  print("10 + 5 =", result)
+  
+  result = math.Multiply(7, 8)
+  print("7 * 8 =", result)
+  
+  result = math.Power(2, 10)
+  print("2^10 =", result)
+  
+  result = math.SquareRoot(144)
+  print("sqrt(144) =", result)
+  
+  if math.IsPrime(17) {
+    print("17 is prime!")
+  } else {
+    print("17 is not prime!")
+  }
+  
+  // Test crypto library
+  print("\nCrypto Library Tests:")
+  data = "Hello Aether!"
+  hash = crypto.Hash(data)
+  print("Hash of 'Hello Aether!' =", hash)
+  
+  key = crypto.GenerateKey()
+  print("Generated key =", key)
+  
+  encrypted = crypto.Encrypt(data, key)
+  print("Encrypted data length =", encrypted.length)
+  
+  decrypted = crypto.Decrypt(encrypted, key)
+  print("Decrypted data =", decrypted)
+  
+  if crypto.ValidatePassword("StrongPass123") {
+    print("Password 'StrongPass123' is valid!")
+  } else {
+    print("Password 'StrongPass123' is invalid!")
+  }
+  
+  if crypto.ValidatePassword("weak") {
+    print("Password 'weak' is valid!")
+  } else {
+    print("Password 'weak' is invalid!")
+  }
+  
+  print("\n🎉 CMake demo completed successfully!")
+}
+
+main() 

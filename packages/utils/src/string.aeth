@@ -1,0 +1,39 @@
+func trim(str) {
+    return str.trim()
+}
+
+func split(str, delimiter) {
+    return str.split(delimiter)
+}
+
+func join(array, separator) {
+    return array.join(separator)
+}
+
+func replace(str, old, new) {
+    return str.replace(old, new)
+}
+
+func contains(str, substring) {
+    return str.contains(substring)
+}
+
+func starts_with(str, prefix) {
+    return str.starts_with(prefix)
+}
+
+func ends_with(str, suffix) {
+    return str.ends_with(suffix)
+}
+
+func to_upper(str) {
+    return str.to_upper()
+}
+
+func to_lower(str) {
+    return str.to_lower()
+}
+
+func capitalize(str) {
+    return str.capitalize()
+} 

@@ -1,0 +1,21 @@
+import c/stdio
+
+func print(message) {
+    return stdio.printf("%s", message)
+}
+
+func println(message) {
+    return stdio.printf("%s\n", message)
+}
+
+func printf(format, ...args) {
+    return stdio.printf(format, ...args)
+}
+
+func eprint(message) {
+    return stdio.fprintf(stdio.stderr, "%s", message)
+}
+
+func eprintln(message) {
+    return stdio.fprintf(stdio.stderr, "%s\n", message)
+} 

@@ -12,7 +12,7 @@ import (
 
 var LintCmd = &cobra.Command{
 	Use:   "lint",
-	Short: "Lint all .ae files for casing consistency",
+	Short: "Lint all .aeth files for casing consistency",
 	Run: func(cmd *cobra.Command, args []string) {
 		lintProject()
 	},
@@ -24,7 +24,7 @@ func lintProject() {
 		if err != nil {
 			return nil
 		}
-		if !info.IsDir() && strings.HasSuffix(path, ".ae") {
+		if !info.IsDir() && strings.HasSuffix(path, ".aeth") {
 			files = append(files, path)
 		}
 		return nil
@@ -37,8 +37,8 @@ func lintProject() {
 
 func checkFileCasing(path string) {
 	base := filepath.Base(path)
-	if !regexp.MustCompile(`^[a-z0-9_]+\.ae$`).MatchString(base) {
-		fmt.Println("🍕 Warning: File '", base, "' should be snake_case (e.g., 'main.ae')")
+	if !regexp.MustCompile(`^[a-z0-9_]+\.aeth$`).MatchString(base) {
+		fmt.Println("🍕 Warning: File '", base, "' should be snake_case (e.g., 'main.aeth')")
 	}
 }
 

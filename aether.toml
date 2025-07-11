@@ -1,5 +1,23 @@
 [project]
 name = "aether"
 version = "0.1.0"
+author = "Aether Team"
+description = "The Aether programming language compiler and tools"
+
+[build]
+source_directories = ["src", "examples"]
+output_directory = "build"
+target = "native"
+optimization = "2"
+linker = "mold"
+create_library = false
+library_type = "shared"
 
 [dependencies]
+stdlib = "packages/stdlib"
+utils = "packages/utils"
+c = "packages/c"
+aether_structures = "src/compiler/aether_structures.aeth"
+
+[dev-dependencies]
+linter = "packages/linter"

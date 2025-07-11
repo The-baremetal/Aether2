@@ -11,10 +11,13 @@ func compileStmt(stmt parser.Statement, ctx *CompilerContext) {
 	switch s := stmt.(type) {
 	case *parser.Assignment:
 		val := compileExpr(s.Value, ctx)
-		alloca := ctx.builder.NewAlloca(val.Type())
-		alloca.SetName(s.Name.Value)
-		ctx.builder.NewStore(val, alloca)
-		ctx.SetSymbol(s.Name.Value, alloca)
+		// For now, only support single assignment for codegen
+		if len(s.Names) > 0 {
+			alloca := ctx.builder.NewAlloca(val.Type())
+			alloca.SetName(s.Names[0].Value)
+			ctx.builder.NewStore(val, alloca)
+			ctx.SetSymbol(s.Names[0].Value, alloca)
+		}
 	case *parser.Function:
 		fn := ctx.module.NewFunc(s.Name.Value, types.I32)
 		ctx.SetSymbol(s.Name.Value, fn)
@@ -69,6 +72,15 @@ func compileStmt(stmt parser.Statement, ctx *CompilerContext) {
 		for _, stmt := range s.Statements {
 			compileStmt(stmt, ctx)
 		}
+	case *parser.Match:
+		// TODO: Proper match/case codegen. For now, just compile all case bodies.
+		for _, c := range s.Cases {
+			compileStmt(c.Body, ctx)
+		}
+	case *parser.Break:
+		// TODO: Proper break codegen. For now, do nothing.
+	case *parser.Continue:
+		// TODO: Proper continue codegen. For now, do nothing.
 	case *parser.Return:
 		if s.Value != nil {
 			val := compileExpr(s.Value, ctx)

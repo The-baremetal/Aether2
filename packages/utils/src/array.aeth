@@ -1,0 +1,71 @@
+func map(array, func) {
+    result = []
+    for item in array {
+        result.push(func(item))
+    }
+    return result
+}
+
+func filter(array, predicate) {
+    result = []
+    for item in array {
+        if predicate(item) {
+            result.push(item)
+        }
+    }
+    return result
+}
+
+func reduce(array, func, initial) {
+    accumulator = initial
+    for item in array {
+        accumulator = func(accumulator, item)
+    }
+    return accumulator
+}
+
+func find(array, predicate) {
+    for item in array {
+        if predicate(item) {
+            return item
+        }
+    }
+    return null
+}
+
+func find_index(array, predicate) {
+    for i, item in array {
+        if predicate(item) {
+            return i
+        }
+    }
+    return -1
+}
+
+func includes(array, value) {
+    return array.includes(value)
+}
+
+func unique(array) {
+    result = []
+    seen = {}
+    for item in array {
+        if !seen[item] {
+            result.push(item)
+            seen[item] = true
+        }
+    }
+    return result
+}
+
+func sort(array) {
+    return array.sort()
+}
+
+func reverse(array) {
+    return array.reverse()
+}
+
+func slice(array, start, end) {
+    return array.slice(start, end)
+} 

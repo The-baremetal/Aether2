@@ -1,0 +1,124 @@
+import aether_structures
+
+// Example: Represent the Aether program "x = 5 + 3" as data structures
+func create_simple_program() {
+  // Create tokens
+  token_x = create_token("IDENT", "x", 1, 1)
+  token_equals = create_token("ASSIGN", "=", 1, 3)
+  token_5 = create_token("INT", "5", 1, 5)
+  token_plus = create_token("PLUS", "+", 1, 7)
+  token_3 = create_token("INT", "3", 1, 9)
+  
+  // Create expressions
+  literal_5 = create_integer_literal(5)
+  literal_3 = create_integer_literal(3)
+  binary_expr = create_binary_expression(literal_5, "+", literal_3)
+  
+  // Create statement
+  let_stmt = create_let_statement("x", binary_expr)
+  
+  // Create program
+  program = create_program([let_stmt])
+  
+  return program
+}
+
+// Example: Represent a function definition
+func create_function_program() {
+  // Function: func add(x, y) { return x + y }
+  
+  // Create parameters
+  param_x = create_parameter("x", "int")
+  param_y = create_parameter("y", "int")
+  params = [param_x, param_y]
+  
+  // Create function body expressions
+  ident_x = create_identifier("x")
+  ident_y = create_identifier("y")
+  add_expr = create_binary_expression(ident_x, "+", ident_y)
+  return_stmt = create_return_statement(add_expr)
+  
+  // Create function body
+  body = create_block_statement([return_stmt])
+  
+  // Create function literal
+  func_lit = create_function_literal("add", params, body, "int")
+  
+  // Create program with function
+  program = create_program([func_lit])
+  
+  return program
+}
+
+// Example: Represent a more complex program with multiple statements
+func create_complex_program() {
+  // Program:
+  // x = 10
+  // y = 20
+  // result = add(x, y)
+  
+  // Statement 1: x = 10
+  literal_10 = create_integer_literal(10)
+  stmt1 = create_let_statement("x", literal_10)
+  
+  // Statement 2: y = 20
+  literal_20 = create_integer_literal(20)
+  stmt2 = create_let_statement("y", literal_20)
+  
+  // Statement 3: result = add(x, y)
+  ident_x = create_identifier("x")
+  ident_y = create_identifier("y")
+  args = [ident_x, ident_y]
+  call_expr = create_call_expression(create_identifier("add"), args)
+  stmt3 = create_let_statement("result", call_expr)
+  
+  // Create program
+  program = create_program([stmt1, stmt2, stmt3])
+  
+  return program
+}
+
+// Print program structure
+func print_program_structure(program) {
+  print("Program has", program.statements.length, "statements")
+  
+  for i, stmt in program.statements {
+    print("Statement", i, "type:", stmt.type)
+    
+    match stmt.type {
+      case "LetStatement" {
+        print("  Variable:", stmt.name)
+        print("  Value type:", stmt.value.type)
+      }
+      case "FunctionLiteral" {
+        print("  Function name:", stmt.name)
+        print("  Parameters:", stmt.parameters.length)
+        print("  Return type:", stmt.return_type)
+      }
+      case _ {
+        print("  Unknown statement type")
+      }
+    }
+  }
+}
+
+// Test the examples
+func main() {
+  print("=== Simple Program Example ===")
+  simple_program = create_simple_program()
+  print_program_structure(simple_program)
+  print()
+  
+  print("=== Function Program Example ===")
+  func_program = create_function_program()
+  print_program_structure(func_program)
+  print()
+  
+  print("=== Complex Program Example ===")
+  complex_program = create_complex_program()
+  print_program_structure(complex_program)
+  print()
+  
+  print("=== Phase 1 Complete! ===")
+  print("Core data structures are ready for Phase 2 (Lexer implementation)")
+} 

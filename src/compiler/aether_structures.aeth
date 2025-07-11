@@ -1,0 +1,384 @@
+// Core data structures for Aether self-hosting compiler
+// Phase 1: Fundamental compiler components
+
+// Token representation
+struct Token {
+  type: string
+  literal: string
+  line: int
+  column: int
+}
+
+// AST nodes
+struct Program {
+  statements: Statement[]
+}
+
+struct Statement {
+  type: string
+}
+
+struct Expression {
+  type: string
+}
+
+// Function-related structures
+struct FunctionLiteral {
+  name: string
+  parameters: Parameter[]
+  body: BlockStatement
+  return_type: string
+}
+
+struct Parameter {
+  name: string
+  type: string
+}
+
+struct BlockStatement {
+  statements: Statement[]
+}
+
+// Expression structures
+struct ExpressionStatement {
+  expression: Expression
+}
+
+struct ReturnStatement {
+  return_value: Expression
+}
+
+struct LetStatement {
+  name: string
+  value: Expression
+}
+
+struct Identifier {
+  value: string
+}
+
+struct IntegerLiteral {
+  value: int
+}
+
+struct StringLiteral {
+  value: string
+}
+
+struct BooleanLiteral {
+  value: bool
+}
+
+// Binary and unary expressions
+struct BinaryExpression {
+  left: Expression
+  operator: string
+  right: Expression
+}
+
+struct UnaryExpression {
+  operator: string
+  right: Expression
+}
+
+struct CallExpression {
+  function: Expression
+  arguments: Expression[]
+}
+
+// Control flow structures
+struct IfExpression {
+  condition: Expression
+  consequence: BlockStatement
+  alternative: BlockStatement
+}
+
+struct WhileExpression {
+  condition: Expression
+  body: BlockStatement
+}
+
+struct ForExpression {
+  variable: string
+  iterable: Expression
+  body: BlockStatement
+}
+
+// Lexer state
+struct Lexer {
+  input: string
+  position: int
+  read_position: int
+  ch: string
+  line: int
+  column: int
+}
+
+// Parser state
+struct Parser {
+  l: Lexer
+  cur_token: Token
+  peek_token: Token
+  errors: string[]
+}
+
+// Code generator state
+struct CodeGenerator {
+  module: string
+  functions: FunctionLiteral[]
+  current_function: string
+  symbol_table: Symbol[]
+}
+
+// Symbol table for scoping
+struct SymbolTable {
+  store: Symbol[]
+  outer: SymbolTable
+}
+
+struct Symbol {
+  name: string
+  type: string
+  scope: string
+  index: int
+}
+
+// Error handling structures
+struct CompileError {
+  message: string
+  line: int
+  column: int
+  file: string
+}
+
+struct CompileResult {
+  success: bool
+  errors: string[]
+  warnings: string[]
+  output: string
+}
+
+// Type system structures
+struct Type {
+  name: string
+  is_primitive: bool
+  is_array: bool
+  element_type: Type
+  fields: Field[]
+}
+
+struct Field {
+  name: string
+  type: string
+}
+
+struct TypeEnvironment {
+  types: Type[]
+  parent: TypeEnvironment
+}
+
+// Helper functions for working with structures
+func create_token(type, literal, line, column) {
+  return Token {
+    type: type
+    literal: literal
+    line: line
+    column: column
+  }
+}
+
+func create_identifier(value) {
+  return Identifier {
+    value: value
+  }
+}
+
+func create_integer_literal(value) {
+  return IntegerLiteral {
+    value: value
+  }
+}
+
+func create_string_literal(value) {
+  return StringLiteral {
+    value: value
+  }
+}
+
+func create_boolean_literal(value) {
+  return BooleanLiteral {
+    value: value
+  }
+}
+
+func create_binary_expression(left, operator, right) {
+  return BinaryExpression {
+    left: left
+    operator: operator
+    right: right
+  }
+}
+
+func create_unary_expression(operator, right) {
+  return UnaryExpression {
+    operator: operator
+    right: right
+  }
+}
+
+func create_call_expression(function, arguments) {
+  return CallExpression {
+    function: function
+    arguments: arguments
+  }
+}
+
+func create_if_expression(condition, consequence, alternative) {
+  return IfExpression {
+    condition: condition
+    consequence: consequence
+    alternative: alternative
+  }
+}
+
+func create_while_expression(condition, body) {
+  return WhileExpression {
+    condition: condition
+    body: body
+  }
+}
+
+func create_for_expression(variable, iterable, body) {
+  return ForExpression {
+    variable: variable
+    iterable: iterable
+    body: body
+  }
+}
+
+func create_let_statement(name, value) {
+  return LetStatement {
+    name: name
+    value: value
+  }
+}
+
+func create_return_statement(return_value) {
+  return ReturnStatement {
+    return_value: return_value
+  }
+}
+
+func create_function_literal(name, parameters, body, return_type) {
+  return FunctionLiteral {
+    name: name
+    parameters: parameters
+    body: body
+    return_type: return_type
+  }
+}
+
+func create_parameter(name, type) {
+  return Parameter {
+    name: name
+    type: type
+  }
+}
+
+func create_block_statement(statements) {
+  return BlockStatement {
+    statements: statements
+  }
+}
+
+func create_program(statements) {
+  return Program {
+    statements: statements
+  }
+}
+
+func create_compile_error(message, line, column, file) {
+  return CompileError {
+    message: message
+    line: line
+    column: column
+    file: file
+  }
+}
+
+func create_compile_result(success, errors, warnings, output) {
+  return CompileResult {
+    success: success
+    errors: errors
+    warnings: warnings
+    output: output
+  }
+}
+
+// Type creation helpers
+func create_type(name, is_primitive, is_array, element_type, fields) {
+  return Type {
+    name: name
+    is_primitive: is_primitive
+    is_array: is_array
+    element_type: element_type
+    fields: fields
+  }
+}
+
+func create_primitive_type(name) {
+  return create_type(name, true, false, null, [])
+}
+
+func create_array_type(element_type) {
+  return create_type("array", false, true, element_type, [])
+}
+
+// Symbol table helpers
+func create_symbol_table() {
+  return SymbolTable {
+    store: []
+    outer: null
+  }
+}
+
+func create_symbol(name, type, scope, index) {
+  return Symbol {
+    name: name
+    type: type
+    scope: scope
+    index: index
+  }
+}
+
+// Lexer creation
+func create_lexer(input) {
+  return Lexer {
+    input: input
+    position: 0
+    read_position: 0
+    ch: ""
+    line: 1
+    column: 0
+  }
+}
+
+// Parser creation
+func create_parser(lexer) {
+  return Parser {
+    l: lexer
+    cur_token: null
+    peek_token: null
+    errors: []
+  }
+}
+
+// Code generator creation
+func create_code_generator() {
+  return CodeGenerator {
+    module: ""
+    functions: []
+    current_function: ""
+    symbol_table: []
+  }
+} 

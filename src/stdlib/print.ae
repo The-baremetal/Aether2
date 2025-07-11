@@ -1,5 +1,0 @@
-import c
-
-func print(message) {
-    return c.printf("%s", message)
-} 

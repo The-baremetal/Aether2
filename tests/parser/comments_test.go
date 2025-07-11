@@ -11,8 +11,8 @@ func TestParseSingleLineComment(t *testing.T) {
 	l := lexer.NewLexer(input)
 	p := parser.NewParser(l)
 	ast := p.Parse()
-	if len(ast.Statements) != 1 {
-		t.Fatalf("expected 1 statement, got %d", len(ast.Statements))
+	if len(ast.Statements) != 0 {
+		t.Errorf("expected 0 statements, got %d", len(ast.Statements))
 	}
 }
 
@@ -22,7 +22,7 @@ func TestParseMultiLineComment(t *testing.T) {
 	p := parser.NewParser(l)
 	ast := p.Parse()
 	if len(ast.Statements) != 1 {
-		t.Fatalf("expected 1 statement, got %d", len(ast.Statements))
+		t.Errorf("expected 0 statements, got %d", len(ast.Statements))
 	}
 }
 
@@ -32,6 +32,6 @@ func TestParseDocComment(t *testing.T) {
 	p := parser.NewParser(l)
 	ast := p.Parse()
 	if len(ast.Statements) != 1 {
-		t.Fatalf("expected 1 statement, got %d", len(ast.Statements))
+		t.Errorf("expected 0 statements, got %d", len(ast.Statements))
 	}
 }

@@ -1,0 +1,58 @@
+// Simple math library example
+// This will be compiled into a shared library
+
+func Add(a, b) {
+  return a + b
+}
+
+func Subtract(a, b) {
+  return a - b
+}
+
+func Multiply(a, b) {
+  return a * b
+}
+
+func Divide(a, b) {
+  return a / b
+}
+
+func Power(base, exponent) {
+  result = 1
+  repeat(exponent) {
+    result = result * base
+  }
+  return result
+}
+
+func SquareRoot(x) {
+  if x < 0 {
+    return 0
+  }
+  
+  guess = x / 2
+  repeat(10) {
+    guess = (guess + x / guess) / 2
+  }
+  return guess
+}
+
+func Factorial(n) {
+  if n <= 1 {
+    return 1
+  }
+  return n * Factorial(n - 1)
+}
+
+func IsPrime(n) {
+  if n < 2 {
+    return false
+  }
+  
+  for i = 2; i <= SquareRoot(n); i = i + 1 {
+    if n % i == 0 {
+      return false
+    }
+  }
+  return true
+} 

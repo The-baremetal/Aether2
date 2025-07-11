@@ -1,0 +1,172 @@
+import aether_structures
+
+// Test the core data structures
+func test_token_creation() {
+  token = create_token("IDENT", "x", 1, 5)
+  print("Token type:", token.type)
+  print("Token literal:", token.literal)
+  print("Token line:", token.line)
+  print("Token column:", token.column)
+}
+
+func test_identifier_creation() {
+  ident = create_identifier("myVariable")
+  print("Identifier value:", ident.value)
+}
+
+func test_integer_literal_creation() {
+  int_lit = create_integer_literal(42)
+  print("Integer literal value:", int_lit.value)
+}
+
+func test_string_literal_creation() {
+  str_lit = create_string_literal("Hello, Aether!")
+  print("String literal value:", str_lit.value)
+}
+
+func test_binary_expression_creation() {
+  left = create_identifier("x")
+  right = create_integer_literal(10)
+  binary = create_binary_expression(left, "+", right)
+  print("Binary expression operator:", binary.operator)
+  print("Binary expression left:", binary.left.value)
+  print("Binary expression right:", binary.right.value)
+}
+
+func test_function_literal_creation() {
+  param1 = create_parameter("x", "int")
+  param2 = create_parameter("y", "int")
+  params = [param1, param2]
+  
+  body_stmt = create_identifier("result")
+  body = create_block_statement([body_stmt])
+  
+  func_lit = create_function_literal("add", params, body, "int")
+  print("Function name:", func_lit.name)
+  print("Function parameters:", func_lit.parameters.length)
+  print("Function return type:", func_lit.return_type)
+}
+
+func test_program_creation() {
+  stmt1 = create_identifier("x")
+  stmt2 = create_integer_literal(5)
+  statements = [stmt1, stmt2]
+  
+  program = create_program(statements)
+  print("Program statements:", program.statements.length)
+}
+
+func test_compile_error_creation() {
+  error = create_compile_error("Unexpected token", 10, 15, "test.aeth")
+  print("Error message:", error.message)
+  print("Error line:", error.line)
+  print("Error column:", error.column)
+  print("Error file:", error.file)
+}
+
+func test_compile_result_creation() {
+  error1 = create_compile_error("Syntax error", 1, 1, "test.aeth")
+  error2 = create_compile_error("Type error", 2, 1, "test.aeth")
+  errors = [error1, error2]
+  
+  result = create_compile_result(false, errors, [], "")
+  print("Compile success:", result.success)
+  print("Compile errors:", result.errors.length)
+  print("Compile warnings:", result.warnings.length)
+}
+
+func test_type_creation() {
+  int_type = create_primitive_type("int")
+  print("Type name:", int_type.name)
+  print("Type is primitive:", int_type.is_primitive)
+  
+  array_type = create_array_type(int_type)
+  print("Array type name:", array_type.name)
+  print("Array type is array:", array_type.is_array)
+  print("Array element type:", array_type.element_type.name)
+}
+
+func test_symbol_table_creation() {
+  symbol_table = create_symbol_table()
+  print("Symbol table created")
+  print("Symbol table store length:", symbol_table.store.length)
+  
+  symbol = create_symbol("x", "int", "global", 0)
+  print("Symbol name:", symbol.name)
+  print("Symbol type:", symbol.type)
+  print("Symbol scope:", symbol.scope)
+  print("Symbol index:", symbol.index)
+}
+
+func test_lexer_creation() {
+  lexer = create_lexer("x = 5")
+  print("Lexer input:", lexer.input)
+  print("Lexer position:", lexer.position)
+  print("Lexer read position:", lexer.read_position)
+  print("Lexer line:", lexer.line)
+  print("Lexer column:", lexer.column)
+}
+
+func test_parser_creation() {
+  lexer = create_lexer("x = 5")
+  parser = create_parser(lexer)
+  print("Parser lexer input:", parser.l.input)
+  print("Parser errors length:", parser.errors.length)
+}
+
+func test_code_generator_creation() {
+  generator = create_code_generator()
+  print("Code generator module:", generator.module)
+  print("Code generator functions length:", generator.functions.length)
+  print("Code generator current function:", generator.current_function)
+  print("Code generator symbol table length:", generator.symbol_table.length)
+}
+
+// Run all tests
+func main() {
+  print("=== Testing Core Data Structures ===")
+  
+  test_token_creation()
+  print()
+  
+  test_identifier_creation()
+  print()
+  
+  test_integer_literal_creation()
+  print()
+  
+  test_string_literal_creation()
+  print()
+  
+  test_binary_expression_creation()
+  print()
+  
+  test_function_literal_creation()
+  print()
+  
+  test_program_creation()
+  print()
+  
+  test_compile_error_creation()
+  print()
+  
+  test_compile_result_creation()
+  print()
+  
+  test_type_creation()
+  print()
+  
+  test_symbol_table_creation()
+  print()
+  
+  test_lexer_creation()
+  print()
+  
+  test_parser_creation()
+  print()
+  
+  test_code_generator_creation()
+  print()
+  
+  print("=== All tests completed! ===")
+} 

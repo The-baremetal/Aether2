@@ -21,8 +21,8 @@ type Program struct {
 func (p *Program) node() {}
 
 type Assignment struct {
-	Name  *Identifier `json:"name"`
-	Value Expression  `json:"value"`
+	Names []*Identifier `json:"names"`
+	Value Expression    `json:"value"`
 }
 
 func (a *Assignment) node()      {}
@@ -39,8 +39,8 @@ func (f *Function) statement()  {}
 func (f *Function) expression() {}
 
 type StructDef struct {
-	Name   *Identifier   `json:"name"`
-	Fields []*Identifier `json:"fields"`
+	Name   *Identifier `json:"name"`
+	Fields []*Field    `json:"fields"`
 }
 
 func (s *StructDef) node()      {}
@@ -104,6 +104,13 @@ type Import struct {
 func (i *Import) node()      {}
 func (i *Import) statement() {}
 
+type Package struct {
+	Name *Identifier `json:"name"`
+}
+
+func (p *Package) node()      {}
+func (p *Package) statement() {}
+
 type CComment struct {
 	Content string `json:"content"`
 }
@@ -155,6 +162,24 @@ func (p *PropertyAccess) node()       {}
 func (p *PropertyAccess) expression() {}
 func (p *PropertyAccess) statement()  {}
 
+type ArrayIndex struct {
+	Array Expression `json:"array"`
+	Index Expression `json:"index"`
+}
+
+func (a *ArrayIndex) node()       {}
+func (a *ArrayIndex) expression() {}
+func (a *ArrayIndex) statement()  {}
+
+type StructInstantiation struct {
+	TypeName *Identifier            `json:"type_name"`
+	Fields   map[string]Expression `json:"fields"`
+}
+
+func (s *StructInstantiation) node()       {}
+func (s *StructInstantiation) expression() {}
+func (s *StructInstantiation) statement()  {}
+
 type PartialApplication struct {
 	Function Expression
 	Args     []Expression
@@ -190,14 +215,19 @@ const (
 	WhileKind              NodeKind = "While"
 	RepeatKind             NodeKind = "Repeat"
 	ImportKind             NodeKind = "Import"
+	PackageKind            NodeKind = "Package"
 	CCommentKind           NodeKind = "CComment"
 	ArrayKind              NodeKind = "Array"
 	CallKind               NodeKind = "Call"
 	PropertyAccessKind     NodeKind = "PropertyAccess"
+	ArrayIndexKind         NodeKind = "ArrayIndex"
+	StructInstantiationKind NodeKind = "StructInstantiation"
 	ForKind                NodeKind = "For"
 	PartialApplicationKind NodeKind = "PartialApplication"
 	MatchKind              NodeKind = "Match"
 	CaseKind               NodeKind = "Case"
+	BreakKind              NodeKind = "Break"
+	ContinueKind           NodeKind = "Continue"
 )
 
 type ASTNode struct {
@@ -246,6 +276,27 @@ func expressionToASTNode(e Expression) *ASTNode {
 			Left:     expressionToASTNode(expr.Object),
 			Inner:    []*ASTNode{expressionToASTNode(expr.Property)},
 		}
+	case *ArrayIndex:
+		return &ASTNode{
+			NodeKind: ArrayIndexKind,
+			Left:     expressionToASTNode(expr.Array),
+			Right:    expressionToASTNode(expr.Index),
+		}
+	case *StructInstantiation:
+		fields := make([]*ASTNode, 0, len(expr.Fields))
+		for name, value := range expr.Fields {
+			fieldNode := &ASTNode{
+				NodeKind: "Field",
+				Name:     name,
+				Right:    expressionToASTNode(value),
+			}
+			fields = append(fields, fieldNode)
+		}
+		return &ASTNode{
+			NodeKind: StructInstantiationKind,
+			Name:     expr.TypeName.Value,
+			Inner:    fields,
+		}
 	case *PartialApplication:
 		return &ASTNode{
 			NodeKind: PartialApplicationKind,
@@ -278,6 +329,23 @@ type Case struct {
 }
 
 func (c *Case) node() {}
+
+type Break struct{}
+
+func (b *Break) node()      {}
+func (b *Break) statement() {}
+
+type Continue struct{}
+
+func (c *Continue) node()      {}
+func (c *Continue) statement() {}
+
+type ExpressionStatement struct {
+	Expr Expression
+}
+
+func (e *ExpressionStatement) node()      {}
+func (e *ExpressionStatement) statement() {}
 
 func matchToASTNode(m *Match) *ASTNode {
 	cases := make([]*ASTNode, len(m.Cases))
@@ -315,9 +383,13 @@ func statementToASTNode(s Statement) *ASTNode {
 	case *Match:
 		return matchToASTNode(stmt)
 	case *Assignment:
+		var names []*ASTNode
+		for _, n := range stmt.Names {
+			names = append(names, expressionToASTNode(n))
+		}
 		return &ASTNode{
 			NodeKind: AssignmentKind,
-			Left:     expressionToASTNode(stmt.Name),
+			Params:   names, // or Inner: names,
 			Right:    expressionToASTNode(stmt.Value),
 		}
 	case *Function:
@@ -338,8 +410,9 @@ func statementToASTNode(s Statement) *ASTNode {
 		fields := make([]*ASTNode, len(stmt.Fields))
 		for i, field := range stmt.Fields {
 			fields[i] = &ASTNode{
-				NodeKind: ParamKind, // Assuming ParamKind is used for fields
-				Value:    field.Value,
+				NodeKind: ParamKind,
+				Name:     field.Name.Value,
+				Value:    field.Type,
 			}
 		}
 		return &ASTNode{
@@ -392,11 +465,29 @@ func statementToASTNode(s Statement) *ASTNode {
 			Left:     expressionToASTNode(stmt.Name),
 			Right:    expressionToASTNode(stmt.As),
 		}
+	case *Package:
+		return &ASTNode{
+			NodeKind: PackageKind,
+			Value:    stmt.Name.Value,
+		}
 	case *CComment:
 		return &ASTNode{
 			NodeKind: CCommentKind,
 			Value:    stmt.Content,
 		}
+	case *Break:
+		return &ASTNode{
+			NodeKind: BreakKind,
+		}
+	case *Continue:
+		return &ASTNode{
+			NodeKind: ContinueKind,
+		}
 	}
 	return nil
+}
+
+type Field struct {
+	Name *Identifier `json:"name"`
+	Type string      `json:"type"`
 }

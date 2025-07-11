@@ -21,7 +21,6 @@ func TestParseConcat(t *testing.T) {
 	if assign.Value == nil {
 		t.Fatalf("expected assignment value, got nil")
 	}
-	t.Logf("assign.Value type: %T, value: %#v\n", assign.Value, assign.Value)
 	call, ok := assign.Value.(*parser.Call)
 	if !ok {
 		t.Fatalf("expected *Call node for concat, got %T (value: %#v)", assign.Value, assign.Value)

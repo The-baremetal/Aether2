@@ -1,5 +1,0 @@
-import c
-
-func printf(format, ...args) {
-    return c.printf(format, ...args)
-} 

@@ -1,0 +1,21 @@
+[project]
+name = "my-awesome-app"
+version = "1.0.0"
+author = "Pizza Lover"
+description = "A super customizable Aether application"
+
+[build]
+source_directories = ["src", "lib", "tests"]
+output_directory = "dist"
+target = "linux-amd64"
+optimization = "3"
+linker = "mold"
+create_library = true
+library_type = "both"
+
+[dependencies]
+math = "packages/stdlib"
+utils = "packages/utils"
+
+[dev-dependencies]
+linter = "packages/linter" 

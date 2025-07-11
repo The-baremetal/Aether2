@@ -1,0 +1,55 @@
+// Crypto library for CMake demo
+// This will be compiled into both shared and static libraries
+
+func Hash(data) {
+  // Simple hash function
+  hash = 0
+  for i in data {
+    hash = (hash * 31 + i) % 1000000007
+  }
+  return hash
+}
+
+func Encrypt(data, key) {
+  // Simple XOR encryption
+  encrypted = []
+  for i, byte in data {
+    encrypted[i] = byte ^ key
+  }
+  return encrypted
+}
+
+func Decrypt(data, key) {
+  // XOR decryption (same as encryption)
+  return Encrypt(data, key)
+}
+
+func GenerateKey() {
+  // Simple key generation
+  return Hash("aether-crypto-key")
+}
+
+func ValidatePassword(password) {
+  // Simple password validation
+  if password.length < 8 {
+    return false
+  }
+  
+  hasUpper = false
+  hasLower = false
+  hasDigit = false
+  
+  for char in password {
+    if char >= 'A' and char <= 'Z' {
+      hasUpper = true
+    }
+    if char >= 'a' and char <= 'z' {
+      hasLower = true
+    }
+    if char >= '0' and char <= '9' {
+      hasDigit = true
+    }
+  }
+  
+  return hasUpper and hasLower and hasDigit
+} 

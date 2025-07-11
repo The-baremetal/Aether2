@@ -1,0 +1,77 @@
+import c
+
+func read_file(path) {
+    return c.read_file(path)
+}
+
+func write_file(path, content) {
+    return c.write_file(path, content)
+}
+
+func append_file(path, content) {
+    return c.append_file(path, content)
+}
+
+func exists(path) {
+    return c.file_exists(path)
+}
+
+func is_file(path) {
+    return c.is_file(path)
+}
+
+func is_dir(path) {
+    return c.is_directory(path)
+}
+
+func mkdir(path) {
+    return c.mkdir(path)
+}
+
+func mkdir_p(path) {
+    return c.mkdir_p(path)
+}
+
+func remove(path) {
+    return c.remove(path)
+}
+
+func rename(old_path, new_path) {
+    return c.rename(old_path, new_path)
+}
+
+func copy(src, dst) {
+    return c.copy_file(src, dst)
+}
+
+func list_dir(path) {
+    return c.list_directory(path)
+}
+
+func glob(pattern) {
+    return c.glob(pattern)
+}
+
+func basename(path) {
+    return c.basename(path)
+}
+
+func dirname(path) {
+    return c.dirname(path)
+}
+
+func extname(path) {
+    return c.extname(path)
+}
+
+func join_paths(...paths) {
+    return c.path_join(...paths)
+}
+
+func resolve_path(path) {
+    return c.resolve_path(path)
+}
+
+func relative_path(from, to) {
+    return c.relative_path(from, to)
+} 

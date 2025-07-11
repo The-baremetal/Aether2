@@ -1,5 +1,3 @@
-# 🍕 Aether Language Syntax Guide
-
 Welcome to Aether! The language that stays fresh, simple, and delicious. No crusty old syntax, just pure code vibes. Here’s everything you need to know, all in one place!
 
 ---
@@ -414,11 +412,5 @@ nums.map({
 - Use structured control flow: `if`, `else`, `while`, `repeat`, `break`, `continue`, `return`, `try/catch/finally`.
 - LLVM will squeeze all the performance out of your code, so you never need GOTO anyway. 🍋
 - Your code stays readable, maintainable, and delicious!
-
----
-
-## 🍕 That’s it
-
-Aether is always simple, always fresh, and always ready for new toppings. If you want to add or remove features, just clean the kitchen and start again!
 
 ---

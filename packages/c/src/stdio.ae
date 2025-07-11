@@ -1,0 +1,139 @@
+// C stdio.h bindings
+// #include <stdio.h>
+
+func printf(format, ...args) {
+    // LLVM IR: call i32 (i8*, ...) @printf(i8* %format, ...)
+    return c_printf(format, ...args)
+}
+
+func fprintf(stream, format, ...args) {
+    return c_fprintf(stream, format, ...args)
+}
+
+func sprintf(buffer, format, ...args) {
+    return c_sprintf(buffer, format, ...args)
+}
+
+func snprintf(buffer, size, format, ...args) {
+    return c_snprintf(buffer, size, format, ...args)
+}
+
+func scanf(format, ...args) {
+    return c_scanf(format, ...args)
+}
+
+func fscanf(stream, format, ...args) {
+    return c_fscanf(stream, format, ...args)
+}
+
+func sscanf(str, format, ...args) {
+    return c_sscanf(str, format, ...args)
+}
+
+func getchar() {
+    return c_getchar()
+}
+
+func putchar(c) {
+    return c_putchar(c)
+}
+
+func gets(buffer) {
+    return c_gets(buffer)
+}
+
+func puts(str) {
+    return c_puts(str)
+}
+
+func fgets(buffer, size, stream) {
+    return c_fgets(buffer, size, stream)
+}
+
+func fputs(str, stream) {
+    return c_fputs(str, stream)
+}
+
+func fgetc(stream) {
+    return c_fgetc(stream)
+}
+
+func fputc(c, stream) {
+    return c_fputc(c, stream)
+}
+
+func fflush(stream) {
+    return c_fflush(stream)
+}
+
+func fclose(stream) {
+    return c_fclose(stream)
+}
+
+func fopen(filename, mode) {
+    return c_fopen(filename, mode)
+}
+
+func freopen(filename, mode, stream) {
+    return c_freopen(filename, mode, stream)
+}
+
+func remove(filename) {
+    return c_remove(filename)
+}
+
+func rename(oldname, newname) {
+    return c_rename(oldname, newname)
+}
+
+func tmpfile() {
+    return c_tmpfile()
+}
+
+func tmpnam(buffer) {
+    return c_tmpnam(buffer)
+}
+
+func setvbuf(stream, buffer, mode, size) {
+    return c_setvbuf(stream, buffer, mode, size)
+}
+
+func setbuf(stream, buffer) {
+    return c_setbuf(stream, buffer)
+}
+
+func fseek(stream, offset, whence) {
+    return c_fseek(stream, offset, whence)
+}
+
+func ftell(stream) {
+    return c_ftell(stream)
+}
+
+func rewind(stream) {
+    return c_rewind(stream)
+}
+
+func fread(ptr, size, count, stream) {
+    return c_fread(ptr, size, count, stream)
+}
+
+func fwrite(ptr, size, count, stream) {
+    return c_fwrite(ptr, size, count, stream)
+}
+
+func ferror(stream) {
+    return c_ferror(stream)
+}
+
+func feof(stream) {
+    return c_feof(stream)
+}
+
+func clearerr(stream) {
+    return c_clearerr(stream)
+}
+
+func perror(str) {
+    return c_perror(str)
+} 

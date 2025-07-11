@@ -117,6 +117,14 @@ x = 10
 y = 20
 ```
 
+Aether supports **tuple/multi-variable assignments**:
+
+```aether
+result, err = do_something()
+```
+
+You can assign multiple variables at once, making error handling and other patterns easy and expressive!
+
 ---
 
 ## 7. Conditionals
@@ -250,15 +258,38 @@ pizza()
 
 ## 12. Error Handling
 
+Aether uses explicit, Go-style error handling! No more try/catch/finally—just assignments and if-statements. Tuple assignments make this even easier:
+
 ```aether
-try {
-  riskyStuff()
-} catch (err) {
+result, err = risky_stuff()
+if err != nil {
   print("oops!", err)
-} finally {
-  print("done!")
 }
 ```
+
+If your function returns a value and an error, check the error before using the value:
+
+```aether
+value, err = get_pizza_slice()
+if err != nil {
+  print("no pizza for you!", err)
+} else {
+  print("yum!", value)
+}
+```
+
+To return an error from a function:
+
+```aether
+func get_pizza_slice() {
+  if pizza_box_empty() {
+    return nil, error("no pizza left!")
+  }
+  return "🍕", nil
+}
+```
+
+Create custom errors with `error("message")`. No exceptions, no magic, just pure pizza logic!
 
 ---
 
@@ -418,7 +449,7 @@ nums.map({
 ## 27. No GOTO (Ever!)
 
 - GOTO is not allowed in Aether. No jumping around, no spaghetti code, no pineapple on pizza!
-- Use structured control flow: `if`, `else`, `while`, `repeat`, `break`, `continue`, `return`, `try/catch/finally`.
+- Use structured control flow: `if`, `else`, `while`, `repeat`, `break`, `continue`, `return`.
 - LLVM will squeeze all the performance out of your code, so you never need GOTO anyway. 🍋
 - Your code stays readable, maintainable, and delicious!
 
