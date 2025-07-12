@@ -2,156 +2,278 @@
 
 ## Introduction
 
-Aether is a modern programming language and toolchain. This guide describes how to install all prerequisites and build Aether from source on Linux, macOS, and Windows.
+Aether is a modern programming language and toolchain. This guide provides detailed, step-by-step instructions for installing prerequisites, downloading binaries, building Aether from source, and updating or uninstalling on various operating systems and distributions.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Downloading Binaries](#downloading-binaries)
+3. [Building from Source](#building-from-source)
+4. [Platform-Specific Installation Guides](#platform-specific-installation-guides)
+
+   * [Linux](#linux)
+   * [macOS](#macos)
+   * [Windows](#windows)
+5. [Updating Aether](#updating-aether)
+6. [Troubleshooting](#troubleshooting)
+7. [Uninstalling](#uninstalling)
+8. [Getting Help](#getting-help)
+
+---
 
 ## Prerequisites
 
-You must have the following tools installed:
+Before installing or building Aether, ensure the following tools are installed and available on your system PATH:
 
-- Go (>=1.20)
-- LLVM (>=15)
-- aria2
-- mold linker
+* **Go** (>=1.20)
+* **LLVM** (>=15)
+* **aria2**
+* **mold** linker
 
-### Checking for Prerequisites
+### Checking and Installing Prerequisites
 
 #### Go
 
-- Check: `go version`
-- Install:
-  - Linux: `sudo apt install golang` or `sudo dnf install golang` or `sudo pacman -Sy go`
-  - macOS: `brew install go`
-  - Windows: [Download from golang.org](https://golang.org/dl/)
+* **Check**:  `go version`
+* **Install**:
+
+  * **Debian/Ubuntu**: `sudo apt install golang`
+  * **Fedora/RHEL**: `sudo dnf install golang`
+  * **Arch Linux**: `sudo pacman -Sy go`
+  * **macOS**: `brew install go`
+  * **Windows**: Download from [golang.org](https://golang.org/dl/) and follow the installer.
 
 #### LLVM
 
-- Check: `llvm-config --version`
-- Install: Run `scripts/prerequisites/llvm.sh` (Linux or WSL only)
-  - macOS: `brew install llvm`
-  - Windows: [Download from LLVM releases](https://releases.llvm.org/)
+* **Check**: `llvm-config --version`
+* **Install**:
+
+  * **Debian/Ubuntu**: `sudo apt install llvm`
+  * **Fedora/RHEL**: `sudo dnf install llvm`
+  * **Arch Linux**: `sudo pacman -Sy llvm`
+  * **macOS**: `brew install llvm`
+  * **Windows**: Download from [LLVM Releases](https://releases.llvm.org/) and follow installer.
 
 #### aria2
 
-- Check: `aria2c --version`
-- Install: Run `scripts/prerequisites/aria2.sh`
+* **Check**: `aria2c --version`
+* **Install**:
+
+  * **Linux**: `sudo apt install aria2` / `sudo dnf install aria2` / `sudo pacman -Sy aria2`
+  * **macOS**: `brew install aria2`
+  * **Windows (Chocolatey)**: `choco install aria2` or **(Scoop)**: `scoop install aria2`
 
 #### mold linker
 
-- Check: `mold --version`
-- Install: Run `scripts/prerequisites/mold.sh`
+* **Check**: `mold --version`
+* **Install**:
 
-## Running Prerequisite Scripts
+  * **Linux**: clone and build from source or use distro package if available
+  * **macOS**: `brew install mold`
+  * **Windows**: build via MSYS2 or WSL
 
-On Linux/macOS, run the following scripts as needed:
+---
+
+## Downloading Binaries {#downloading-binaries}
+
+Pre-built Aether binaries are available for various platforms. Use **aria2** to download rapidly:
 
 ```bash
-bash scripts/prerequisites/llvm.sh
-bash scripts/prerequisites/aria2.sh
-bash scripts/prerequisites/mold.sh
+aria2c -x16 -s16 -j1 \
+  https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.tar
 ```
 
-On Windows, use Chocolatey or Scoop, or install manually as described above.
+To download multiple assets in parallel:
 
-## Building Aether
+```bash
+aria2c -x16 -s16 -j4 \
+  https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.tar \
+  https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.deb \
+  https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.rpm
+```
 
-1. Clone the repository:
+Replace URLs for your desired platform and file type.
+
+---
+
+## Building from Source {#building-from-source}
+
+1. **Clone the repository**:
 
    ```bash
    git clone https://github.com/The-baremetal/Aether2.git
    cd Aether2
    ```
 
-2. Build using Make:
+2. **Install prerequisites** (see above).
+
+3. **Build**:
+
+   * **Make**:
+
+     ```bash
+     make build
+     ```
+
+   * **Go**:
+
+     ```bash
+     go build ./...
+     ```
+
+4. **Run tests**:
 
    ```bash
-   make build
+   go test ./...
    ```
+
+5. **Verify CLI**:
 
    ```bash
-   Or build with Go:
+   ./build/bin/aether2 --version
    ```
 
-   ```bash
-   go build ./...
-   ```
+---
 
-## Testing
+## Platform-Specific Installation Guides {#platform-specific-installation-guides}
 
-To verify your build, run:
+### Linux {#linux}
+
+#### Debian / Ubuntu
 
 ```bash
-go test ./...
+sudo apt update
+sudo apt install golang llvm aria2 mold
 ```
 
-Or use the Aether CLI:
+Download and install:
 
 ```bash
-./build/bin/aether2 --version
+aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.deb
+sudo dpkg -i aether-linux_amd64.deb
+aether --version
 ```
 
-## Updating Aether
-
-To update Aether to the latest version, follow these steps:
-
-1. Pull the latest changes from the repository:
-
-   ```bash
-   git pull origin main
-   ```
-
-2. Update dependencies (if any):
-
-   ```bash
-   make deps
-   ```
-
-   Or, if you use Go modules:
-
-   ```bash
-   go mod tidy
-   ```
-
-3. Rebuild Aether:
-
-   ```bash
-   make
-   ```
-
-   Or, if you build with Go:
-
-   ```bash
-   go build ./...
-   ```
-
-If you installed Aether, you can use the command below to update your Aether version
+#### Fedora / RHEL
 
 ```bash
-./aether2 update
+sudo dnf install golang llvm aria2 mold
 ```
 
-or add a nightly flag to update to the latest nightly version
-
 ```bash
-./aether2 update --nightly
+aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.rpm
+sudo rpm -i aether-linux_amd64.rpm
+aether --version
 ```
 
-After updating, you can verify the version:
+#### Arch Linux
 
 ```bash
+sudo pacman -Sy go llvm aria2 mold
+```
+
+````bash
+aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.tar
+
+```bash
+tar -xf aether-linux_amd64.tar
+sudo mv aether /usr/local/bin/
+aether --version
+````
+
+#### Other Distros (Generic TAR)
+
+```bash
+aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-linux_amd64.tar
+tar -xf aether-linux_amd64.tar
+chmod +x aether
+sudo mv aether /usr/local/bin/
+aether --version
+```
+
+### macOS {#macos}
+
+1. Install with Homebrew:
+
+   ```bash
+   brew install go llvm aria2 mold
+   ```
+
+2. Download:
+
+   ```bash
+   aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-darwin_amd64.tar
+   ```
+
+3. Install:
+
+   ```bash
+   tar -xf aether-darwin_amd64.tar
+   chmod +x aether
+   sudo mv aether /usr/local/bin/
+   aether --version
+   ```
+
+### Windows {#windows}
+
+#### Installer
+
+```powershell
+aria2c -x16 -s16 -j1 https://github.com/The-baremetal/Aether2/releases/download/vX.Y.Z/aether-windows_amd64.exe
+& .\aether-windows_amd64.exe --version
+```
+
+#### Manual
+
+1. Download `.exe` with aria2.
+2. Place in a directory on your `PATH` (e.g., `C:\Tools`).
+3. Run:
+
+   ```powershell
+   aether-windows_amd64.exe --version
+   ```
+
+---
+
+## Updating Aether {#updating-aether}
+
+To update your installation:
+
+```bash
+cd Aether2
+git pull origin main
+make deps   # if using Make
+go mod tidy # if using Go modules
+make         # or go build ./...
+```
+
+Or use the built-in updater:
+
+```bash
+./aether2 update           # latest stable
+./aether2 update --nightly # latest nightly
 ./aether2 --version
 ```
 
-## Troubleshooting
+---
 
-- Ensure all prerequisites are installed and on your PATH.
-- Check versions with the commands above.
-- For missing dependencies, rerun the prerequisite scripts.
-- For build errors, consult the output and verify your environment.
+## Troubleshooting {#troubleshooting}
 
-## Uninstalling
+* Verify prerequisites on `PATH`.
+* Re-run prerequisite scripts if missing.
+* Inspect error messages and environment variables.
 
-To remove Aether, delete the repository directory. To remove dependencies, use your package manager.
+---
 
-## Getting Help
+## Uninstalling {#uninstalling}
 
-For support, open an issue on GitHub or join the community chat (link TBD).
+* **Binaries**: Remove `/usr/local/bin/aether` or the installed package via your package manager.
+* **Source**: Delete the `Aether2` directory.
+
+---
+
+## Getting Help {#getting-help}
+
+For support, open an issue on [GitHub](https://github.com/The-baremetal/Aether2/issues) or join the community chat.
