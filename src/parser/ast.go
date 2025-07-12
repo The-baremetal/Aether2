@@ -309,8 +309,6 @@ func expressionToASTNode(e Expression) *ASTNode {
 			NodeKind: SpreadKind,
 			Value:    expr.Name,
 		}
-	case *ExpressionStatement:
-		return expressionToASTNode(expr.Expr)
 	}
 	return nil
 }
@@ -491,6 +489,8 @@ func statementToASTNode(s Statement) *ASTNode {
 		return &ASTNode{
 			NodeKind: ContinueKind,
 		}
+	case *ExpressionStatement:
+		return expressionToASTNode(stmt.Expr)
 	}
 	return nil
 }
