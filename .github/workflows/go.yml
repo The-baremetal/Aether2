@@ -104,13 +104,13 @@ jobs:
             cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
             cp assets/icon-256x256.png AppDir/icon-256x256.png
             cat > AppDir/aether.desktop <<EOF
-            [Desktop Entry]
-            Name=Aether
-            Exec=aether
-            Icon=icon-256x256
-            Type=Application
-            Categories=Development;
-            EOF
+          [Desktop Entry]
+          Name=Aether
+          Exec=aether
+          Icon=icon-256x256
+          Type=Application
+          Categories=Development;
+          EOF
 
             ARCH="$GOARCH"
             if [ "$GOARCH" = "amd64" ]; then ARCH="x86_64"; fi
