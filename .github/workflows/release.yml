@@ -1,27 +1,30 @@
 name: Release
-
 permissions:
   contents: write       # to read repo content and to create releases
   actions: read        # required
-
 on:
   push:
     tags:
       - '*'
-
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
-
+          
       - name: Create GitHub Release and upload files
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: dist/aether-*
+          files: |
+            dist/**/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'nightly') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
