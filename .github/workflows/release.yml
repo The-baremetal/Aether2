@@ -1,7 +1,5 @@
 name: Release
-permissions:
-  contents: write       # to read repo content and to create releases
-  actions: read        # required
+
 on:
   push:
     tags:
@@ -9,6 +7,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # to read repo content and to create releases
+      actions: read        # required
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
