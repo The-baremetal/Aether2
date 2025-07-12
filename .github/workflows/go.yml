@@ -82,13 +82,15 @@ jobs:
 
           # .deb
           mkdir -p dist/deb/DEBIAN
-          echo "Package: aether
-            Version: 1.0.0
-            Section: base
-            Priority: optional
-            Architecture: ${GOARCH}
-            Maintainer: Aether Dev <noreply@aether.org>
-            Description: Aether Programming Language Binary" > dist/deb/DEBIAN/control
+          cat > dist/deb/DEBIAN/control <<EOF
+          Package: aether
+          Version: 1.0.0
+          Section: base
+          Priority: optional
+          Architecture: ${GOARCH}
+          Maintainer: Aether Dev <noreply@aether.org>
+          Description: Aether Programming Language Binary
+          EOF
           mkdir -p dist/deb/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/bin/aether
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
@@ -99,12 +101,14 @@ jobs:
           # .appimage
           mkdir -p AppDir/usr/bin
           cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
-          echo "[Desktop Entry]
-            Name=Aether
-            Exec=aether
-            Icon=utilities-terminal
-            Type=Application
-            Categories=Development;" > AppDir/aether.desktop
+          cat > AppDir/aether.desktop <<EOF
+          [Desktop Entry]
+          Name=Aether
+          Exec=aether
+          Icon=utilities-terminal
+          Type=Application
+          Categories=Development;
+          EOF
           appimagetool AppDir dist/aether-${GOOS}_${GOARCH}.appimage
 
           # .tar
