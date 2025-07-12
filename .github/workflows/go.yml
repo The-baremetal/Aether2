@@ -96,7 +96,7 @@ jobs:
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
 
           # .rpm using fpm
-          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether -p dist/aether-${GOOS}_${GOARCH}.rpm
+          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin -p dist/aether-${GOOS}_${GOARCH}.rpm dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether
 
           # .appimage
           mkdir -p AppDir/usr/bin
