@@ -1,8 +1,10 @@
-name: BUILD
+name: CI + Release
 
 on:
   push:
     branches: [ "main", "test" ]
+    tags:
+      - '*'
   pull_request:
     branches: [ "main", "test" ]
 
@@ -12,7 +14,6 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux (most archs supported)
           - os: linux
             arch: amd64
           - os: linux
@@ -25,19 +26,16 @@ jobs:
             arch: ppc64le
           - os: linux
             arch: riscv64
-          # Windows (only amd64, 386, arm64)
           - os: windows
             arch: amd64
           - os: windows
             arch: 386
           - os: windows
             arch: arm64
-          # Darwin (only amd64, arm64)
           - os: darwin
             arch: amd64
           - os: darwin
             arch: arm64
-          # FreeBSD (only amd64, 386, arm64)
           - os: freebsd
             arch: amd64
           - os: freebsd
@@ -65,7 +63,7 @@ jobs:
           sudo gem install --no-document fpm
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
-          mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+          sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
 
       - name: Build binary
         run: |
@@ -80,7 +78,6 @@ jobs:
           mkdir -p dist/pkgroot/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/bin/aether
 
-          # .deb
           mkdir -p dist/deb/DEBIAN
           cat > dist/deb/DEBIAN/control <<EOF
           Package: aether
@@ -95,10 +92,8 @@ jobs:
           cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/bin/aether
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
 
-          # .rpm using fpm
           fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin -p dist/aether-${GOOS}_${GOARCH}.rpm dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether
 
-          # .appimage
           if [ "$GOARCH" != "riscv64" ] && [ "$GOARCH" != "ppc64le" ]; then
             mkdir -p AppDir/usr/bin
             cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
@@ -124,7 +119,7 @@ jobs:
           else
             echo "Skipping AppImage build for $GOARCH - not supported"
           fi
-          # .tar
+
           mkdir -p tarball
           cp dist/aether-${GOOS}_${GOARCH} tarball/aether
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
@@ -141,5 +136,38 @@ jobs:
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
 
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List downloaded files
+        run: ls -R dist
+
+      - name: Flatten artifacts (optional but very neat)
+        run: |
+          mkdir flat
+          find dist -type f -exec cp {} flat/ \;
+          rm -rf dist
+          mv flat dist
+
+      - name: Create GitHub Release and upload files
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'nightly') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
