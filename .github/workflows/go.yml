@@ -52,34 +52,28 @@ jobs:
           # .deb
           mkdir -p dist/deb/DEBIAN
           echo "Package: aether
-Version: 1.0.0
-Section: base
-Priority: optional
-Architecture: ${GOARCH}
-Maintainer: Aether Dev <noreply@aether.org>
-Description: Aether Programming Language Binary" > dist/deb/DEBIAN/control
+            Version: 1.0.0
+            Section: base
+            Priority: optional
+            Architecture: ${GOARCH}
+            Maintainer: Aether Dev <noreply@aether.org>
+            Description: Aether Programming Language Binary" > dist/deb/DEBIAN/control
           mkdir -p dist/deb/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/bin/aether
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
 
           # .rpm using fpm
-          fpm -s dir -t rpm \
-              -n aether \
-              -v 1.0.0 \
-              --architecture ${GOARCH} \
-              --prefix /usr/local/bin \
-              dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether \
-              -p dist/aether-${GOOS}_${GOARCH}.rpm
+          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether -p dist/aether-${GOOS}_${GOARCH}.rpm
 
           # .appimage
           mkdir -p AppDir/usr/bin
           cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
           echo "[Desktop Entry]
-Name=Aether
-Exec=aether
-Icon=utilities-terminal
-Type=Application
-Categories=Development;" > AppDir/aether.desktop
+            Name=Aether
+            Exec=aether
+            Icon=utilities-terminal
+            Type=Application
+            Categories=Development;" > AppDir/aether.desktop
           appimagetool AppDir dist/aether-${GOOS}_${GOARCH}.appimage
 
           # .tar
