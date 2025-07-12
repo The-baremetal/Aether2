@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	Version   = "0.2.0-nightly"
+	Version   = "0.3.0-nightly"
 	BuildDate = "2024-01-01"
 	Commit    = "development"
 )
