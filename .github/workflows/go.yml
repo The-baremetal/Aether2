@@ -1,7 +1,4 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: BUILD
 
 on:
   push:
@@ -10,19 +7,94 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [linux, windows, darwin, freebsd]
+        arch: [amd64, 386, arm64, arm, riscv64, ppc64le]
+    env:
+      GOOS: ${{ matrix.os }}
+      GOARCH: ${{ matrix.arch }}
+
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24.1'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.1'
 
-    - name: Build
-      run: go build -v ./...
+      - name: Install dependencies (fpm, dpkg, appimage)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev
+          sudo gem install --no-document fpm
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
 
-    - name: Test
-      run: go test -v ./...
+      - name: Build binary
+        run: |
+          mkdir -p dist
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+          go build -o dist/aether-${GOOS}_${GOARCH}${EXT} .
+
+      - name: Package formats for Linux
+        if: matrix.os == 'linux'
+        run: |
+          mkdir -p dist/pkgroot/usr/local/bin
+          cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/bin/aether
+
+          # .deb
+          mkdir -p dist/deb/DEBIAN
+          echo "Package: aether
+Version: 1.0.0
+Section: base
+Priority: optional
+Architecture: ${GOARCH}
+Maintainer: Aether Dev <noreply@aether.org>
+Description: Aether Programming Language Binary" > dist/deb/DEBIAN/control
+          mkdir -p dist/deb/usr/local/bin
+          cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/bin/aether
+          dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
+
+          # .rpm using fpm
+          fpm -s dir -t rpm \
+              -n aether \
+              -v 1.0.0 \
+              --architecture ${GOARCH} \
+              --prefix /usr/local/bin \
+              dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether \
+              -p dist/aether-${GOOS}_${GOARCH}.rpm
+
+          # .appimage
+          mkdir -p AppDir/usr/bin
+          cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
+          echo "[Desktop Entry]
+Name=Aether
+Exec=aether
+Icon=utilities-terminal
+Type=Application
+Categories=Development;" > AppDir/aether.desktop
+          appimagetool AppDir dist/aether-${GOOS}_${GOARCH}.appimage
+
+          # .tar
+          mkdir -p tarball
+          cp dist/aether-${GOOS}_${GOARCH} tarball/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aether-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.tar
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.deb
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.rpm
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
