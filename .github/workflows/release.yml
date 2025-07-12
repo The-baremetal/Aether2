@@ -4,21 +4,27 @@ on:
   push:
     tags:
       - '*'
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write       # to read repo content and to create releases
-      actions: read        # required
+      contents: write
+      actions: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
+          name: aether-build
           path: dist
-          
+
+      - name: List downloaded files
+        run: ls -R dist
+
       - name: Create GitHub Release and upload files
         uses: softprops/action-gh-release@v2
         with:
