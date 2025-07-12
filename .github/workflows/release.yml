@@ -1,5 +1,9 @@
 name: Release
 
+permissions:
+  contents: write       # to read repo content and to create releases
+  actions: read        # required
+
 on:
   push:
     tags:
