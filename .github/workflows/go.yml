@@ -110,7 +110,19 @@ jobs:
           Type=Application
           Categories=Development;
           EOF
-          appimagetool AppDir dist/aether-${GOOS}_${GOARCH}.appimage
+          # Set ARCH for appimagetool (AppImageKit needs this for non-x86_64 archs)
+          ARCH="${GOARCH}"
+          # Map Go arch to AppImage arch
+          if [ "$GOARCH" = "amd64" ]; then ARCH="x86_64"; fi
+          if [ "$GOARCH" = "arm64" ]; then ARCH="aarch64"; fi
+          if [ "$GOARCH" = "386" ]; then ARCH="i386"; fi
+          if [ "$GOARCH" = "arm" ]; then ARCH="armhf"; fi
+          if [ "$GOARCH" = "ppc64le" ]; then ARCH="ppc64le"; fi
+          if [ "$GOARCH" = "riscv64" ]; then ARCH="riscv64"; fi
+          # Only build the AppImage for supported architectures
+          if [[ "$ARCH" == "x86_64" || "$ARCH" == "aarch64" || "$ARCH" == "i386" || "$ARCH" == "armhf" || "$ARCH" == "ppc64le" || "$ARCH" == "riscv64" ]]; then
+            ARCH="$ARCH" appimagetool AppDir dist/aether-${GOOS}_${GOARCH}.appimage
+          fi
 
           # .tar
           mkdir -p tarball
