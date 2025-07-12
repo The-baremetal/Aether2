@@ -228,6 +228,7 @@ const (
 	CaseKind               NodeKind = "Case"
 	BreakKind              NodeKind = "Break"
 	ContinueKind           NodeKind = "Continue"
+	SpreadKind             NodeKind = "Spread"
 )
 
 type ASTNode struct {
@@ -303,6 +304,13 @@ func expressionToASTNode(e Expression) *ASTNode {
 			Left:     expressionToASTNode(expr.Function),
 			Inner:    mapArgsToASTNodes(expr.Args),
 		}
+	case *Spread:
+		return &ASTNode{
+			NodeKind: SpreadKind,
+			Value:    expr.Name,
+		}
+	case *ExpressionStatement:
+		return expressionToASTNode(expr.Expr)
 	}
 	return nil
 }

@@ -43,7 +43,8 @@ func (p *Parser) parseBlock() *Block {
 			Line:    p.curToken.Line,
 			Column:  p.curToken.Column,
 		})
-		return nil
+		// Return the block even if we don't find the closing brace
+		// This allows partial parsing to continue
 	}
 	fmt.Printf("🍕 parseBlock: returning block with %d statements\n", len(block.Statements))
 	return block

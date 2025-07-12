@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 )
 
 func AnalyzeImports(files []string) (map[string][]string, error) {
@@ -81,7 +83,7 @@ func FindAetherFiles(root string) ([]string, error) {
 			return err
 		}
 
-		if !info.IsDir() && strings.HasSuffix(path, ".ae") {
+		if !info.IsDir() && strings.HasSuffix(path, ".aeth") {
 			files = append(files, path)
 		}
 
@@ -89,6 +91,38 @@ func FindAetherFiles(root string) ([]string, error) {
 	})
 
 	return files, err
+}
+
+func ResolveImportPathsToFiles(imports map[string][]string, projectRoot string) ([]string, error) {
+	var resolvedFiles []string
+	
+	// Read aether.toml to get dependency configuration
+	configPath := filepath.Join(projectRoot, "aether.toml")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+	
+	var config struct {
+		Dependencies map[string]string `toml:"dependencies"`
+	}
+	if err := toml.Unmarshal(data, &config); err != nil {
+		return nil, err
+	}
+	
+	// Resolve each import path to actual file path
+	for _, importPaths := range imports {
+		for _, importPath := range importPaths {
+			if depPath, exists := config.Dependencies[importPath]; exists {
+				fullDepPath := filepath.Join(projectRoot, depPath)
+				if _, err := os.Stat(fullDepPath); err == nil {
+					resolvedFiles = append(resolvedFiles, fullDepPath)
+				}
+			}
+		}
+	}
+	
+	return resolvedFiles, nil
 }
 
 func IsExported(name string) bool {

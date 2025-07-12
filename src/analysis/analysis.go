@@ -434,7 +434,28 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 		result.Errors = append(result.Errors, fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath))
 	}
 
-	// Check if imported file exists
+	// First try to resolve using dependency configuration
+	projectRoot := findProjectRoot(filepath.Dir(filePath))
+	configPath := filepath.Join(projectRoot, "aether.toml")
+	
+	if data, err := os.ReadFile(configPath); err == nil {
+		var config struct {
+			Dependencies map[string]string `toml:"dependencies"`
+		}
+		if err := toml.Unmarshal(data, &config); err == nil {
+			if depPath, exists := config.Dependencies[importPath]; exists {
+				fullDepPath := filepath.Join(projectRoot, depPath)
+				if _, err := os.Stat(fullDepPath); err == nil {
+					importInfo.Exists = true
+					importInfo.Resolved = fullDepPath
+					result.Imports[importPath] = importInfo
+					return
+				}
+			}
+		}
+	}
+
+	// Fallback to direct file resolution
 	resolvedPath := resolveImportPath(importPath, filepath.Dir(filePath))
 	if resolvedPath != "" {
 		if _, err := os.Stat(resolvedPath); err == nil {
@@ -785,6 +806,22 @@ func isStdlibFunction(name string) bool {
 	// This function is kept for backward compatibility but always returns false
 	// The real stdlib functions are in lib/core/*.ae files
 	return false
+}
+
+func findProjectRoot(start string) string {
+	dir := start
+	for {
+		configPath := filepath.Join(dir, "aether.toml")
+		if _, err := os.Stat(configPath); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "."
 }
 
 func findAetherFiles(root string) ([]string, error) {

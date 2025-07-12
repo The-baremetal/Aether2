@@ -390,7 +390,44 @@ func doBuild(args []string) {
 	imports, err := analysis.AnalyzeImports(filesToBuild)
 	must(err)
 
-	sortedFiles, err := analysis.TopoSort(filesToBuild, imports)
+	// Resolve import paths to actual files
+	importedFiles, err := analysis.ResolveImportPathsToFiles(imports, projectRoot)
+	must(err)
+
+	// Create a mapping from import names to resolved file paths
+	importNameToPath := make(map[string]string)
+	for _, importPath := range importedFiles {
+		importName := filepath.Base(importPath)
+		importName = strings.TrimSuffix(importName, ".ae")
+		importNameToPath[importName] = importPath
+	}
+
+	// Update imports map to use resolved file paths instead of import names
+	resolvedImports := make(map[string][]string)
+	for sourceFile, importNames := range imports {
+		var resolvedPaths []string
+		for _, importName := range importNames {
+			if resolvedPath, exists := importNameToPath[importName]; exists {
+				resolvedPaths = append(resolvedPaths, resolvedPath)
+			}
+		}
+		resolvedImports[sourceFile] = resolvedPaths
+	}
+
+	// Combine source files with imported files, ensuring uniqueness
+	fileSet := make(map[string]struct{})
+	for _, f := range filesToBuild {
+		fileSet[f] = struct{}{}
+	}
+	for _, f := range importedFiles {
+		fileSet[f] = struct{}{}
+	}
+	var allFiles []string
+	for f := range fileSet {
+		allFiles = append(allFiles, f)
+	}
+
+	sortedFiles, err := analysis.TopoSort(allFiles, resolvedImports)
 	must(err)
 
 	if !buildFlags.quiet {
