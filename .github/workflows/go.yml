@@ -132,11 +132,14 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: aether-${{ matrix.os }}-${{ matrix.arch }}
+          name: binary
           path: |
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.tar
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.deb
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.rpm
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
+
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
