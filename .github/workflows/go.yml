@@ -61,7 +61,7 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev
+          sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev libfuse2
           sudo gem install --no-document fpm
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
