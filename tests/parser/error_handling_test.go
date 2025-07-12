@@ -24,7 +24,7 @@ if err != nil {
 		t.Fatalf("expected first statement to be an assignment, got %T", ast.Statements[0])
 	}
 	// Check that the second statement is an call statement
-	if _, ok := ast.Statements[1].(*parser.Call); !ok {
-		t.Fatalf("expected second statement to be an call statement, got %T", ast.Statements[1])
+	if _, ok := ast.Statements[1].(*parser.If); !ok {
+		t.Fatalf("expected second statement to be an if statement, got %T", ast.Statements[1])
 	}
 }

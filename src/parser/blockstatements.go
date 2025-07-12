@@ -3,18 +3,25 @@ package parser
 import (
 	"aether/lib/utils"
 	"aether/src/lexer"
+	"fmt"
 )
 
 func (p *Parser) parseBlock() *Block {
+	fmt.Printf("🍕 parseBlock: starting, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
 	if !p.expect(lexer.LBRACE) {
+		fmt.Printf("🍕 parseBlock: failed to expect LBRACE\n")
 		return nil
 	}
+	fmt.Printf("🍕 parseBlock: after LBRACE, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
 	block := &Block{Statements: []Statement{}}
 	for p.curToken.Type != lexer.RBRACE && p.curToken.Type != lexer.EOF {
+		fmt.Printf("🍕 parseBlock: parsing statement, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)
+			fmt.Printf("🍕 parseBlock: added statement: %T\n", stmt)
 		} else {
+			fmt.Printf("🍕 parseBlock: got nil statement\n")
 			p.addError(utils.ParseError{
 				Kind:    utils.InvalidSyntax,
 				Message: "nil statement in block",
@@ -27,7 +34,9 @@ func (p *Parser) parseBlock() *Block {
 			}
 		}
 	}
+	fmt.Printf("🍕 parseBlock: before RBRACE check, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
 	if !p.expect(lexer.RBRACE) {
+		fmt.Printf("🍕 parseBlock: failed to expect RBRACE\n")
 		p.addError(utils.ParseError{
 			Kind:    utils.InvalidSyntax,
 			Message: "expected } to close block",
@@ -36,6 +45,7 @@ func (p *Parser) parseBlock() *Block {
 		})
 		return nil
 	}
+	fmt.Printf("🍕 parseBlock: returning block with %d statements\n", len(block.Statements))
 	return block
 }
 
@@ -50,6 +60,9 @@ func (p *Parser) parseFunc() *Function {
 	} else {
 		name = &Identifier{Value: ""}
 	}
+
+	fmt.Printf("🍕 parseFunc: after name, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
+
 	params := []*Identifier{}
 	if p.curToken.Type == lexer.LPAREN {
 		p.nextToken()
@@ -96,7 +109,10 @@ func (p *Parser) parseFunc() *Function {
 			return nil
 		}
 	}
+
+	fmt.Printf("🍕 parseFunc: before parseBlock, curToken: %s '%s'\n", p.curToken.Type, p.curToken.Literal)
 	body := p.parseBlock()
+	fmt.Printf("🍕 parseFunc: after parseBlock, body: %+v\n", body)
 	return &Function{Name: name, Params: params, Body: body}
 }
 

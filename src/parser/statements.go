@@ -3,85 +3,131 @@ package parser
 import (
 	"aether/lib/utils"
 	"aether/src/lexer"
+	"fmt"
 )
-
-// peekTokenN safely peeks n tokens ahead without advancing the parser state.
-// n=1 returns the next token, n=2 returns the token after that, etc.
-func (p *Parser) peekTokenN(n int) lexer.Token {
-	tok := p.curToken
-	peek := p.peekToken
-	for i := 1; i < n; i++ {
-		p.nextToken()
-	}
-	result := p.peekToken
-	// Restore tokens
-	p.curToken = tok
-	p.peekToken = peek
-	return result
-}
 
 // isAssignmentPattern checks if the current token sequence matches
 // IDENT (COMMA IDENT)* ASSIGN without consuming tokens.
 func (p *Parser) isAssignmentPattern() bool {
-	origCur := p.curToken
-	origPeek := p.peekToken
-	// At least one IDENT
 	if p.curToken.Type != lexer.IDENT {
 		return false
 	}
-	// Look for (COMMA IDENT)*
+
+	// Use a local buffer to peek ahead from parser's state
+
+tokens := []lexer.Token{p.curToken, p.peekToken}
+	peekIndex := 1
 	for {
-		if p.peekToken.Type == lexer.COMMA {
-			p.nextToken() // move to COMMA
-			p.nextToken() // move to IDENT
-			if p.curToken.Type != lexer.IDENT {
-				// Restore tokens
-				p.curToken = origCur
-				p.peekToken = origPeek
+		if peekIndex+1 >= len(tokens) {
+			tokens = append(tokens, p.l.PeekToken(peekIndex))
+		}
+		nextToken := tokens[peekIndex]
+		if nextToken.Type == lexer.COMMA {
+			if peekIndex+2 >= len(tokens) {
+				tokens = append(tokens, p.l.PeekToken(peekIndex+1))
+			}
+			identToken := tokens[peekIndex+1]
+			if identToken.Type != lexer.IDENT {
 				return false
 			}
+			peekIndex += 2
 			continue
 		}
 		break
 	}
-	// After the last IDENT, peek for ASSIGN
-	if p.peekToken.Type == lexer.ASSIGN {
-		// Restore tokens
-		p.curToken = origCur
-		p.peekToken = origPeek
-		return true
+	if peekIndex+1 >= len(tokens) {
+		tokens = append(tokens, p.l.PeekToken(peekIndex))
 	}
-	// Restore tokens
-	p.curToken = origCur
-	p.peekToken = origPeek
-	return false
+	assignToken := tokens[peekIndex]
+	result := assignToken.Type == lexer.ASSIGN
+	return result
+}
+
+func (p *Parser) parseTupleAssignment(names []*Identifier) *Assignment {
+	if p.curToken.Type == lexer.ASSIGN {
+		p.nextToken()
+		var value Expression
+		if p.curToken.Type == lexer.LBRACKET {
+			arr := p.parseArray()
+			arrayNode, ok := arr.(*Array)
+			if !ok || arrayNode == nil {
+				p.addError(utils.ParseError{
+					Kind:    utils.InvalidSyntax,
+					Message: "invalid array on right-hand side of tuple assignment",
+					Line:    p.curToken.Line,
+					Column:  p.curToken.Column,
+				})
+				elems := make([]Expression, len(names))
+				for i := range elems {
+					elems[i] = &Literal{Value: nil}
+				}
+				return &Assignment{Names: names, Value: &Array{Elements: elems}}
+			}
+			value = arrayNode
+		} else {
+			elems := []Expression{}
+			first := p.parseExpression()
+			fmt.Println("First right side expression:", first)
+			if first != nil {
+				elems = append(elems, first)
+			}
+			for p.curToken.Type == lexer.COMMA {
+				p.nextToken()
+				expr := p.parseExpression()
+				fmt.Println("Next right side expression:", expr)
+				if expr != nil {
+					elems = append(elems, expr)
+				}
+			}
+			for len(elems) < len(names) {
+				elems = append(elems, &Literal{Value: nil})
+			}
+			if len(elems) > len(names) {
+				elems = elems[:len(names)]
+			}
+			for i := range elems {
+				if elems[i] == nil {
+					elems[i] = &Literal{Value: nil}
+				}
+			}
+			if elems == nil {
+				elems = make([]Expression, len(names))
+				for i := range elems {
+					elems[i] = &Literal{Value: nil}
+				}
+			}
+			value = &Array{Elements: elems}
+		}
+		
+		if p.curToken.Type == lexer.COMMA {
+			p.nextToken()
+		}
+		if p.curToken.Type == lexer.EOF {
+			p.nextToken()
+		}
+		
+		return &Assignment{Names: names, Value: value}
+	}
+	
+	p.nextToken()
+	return nil
 }
 
 // parseStatement parses a single statement, which may be an assignment,
 // a control structure, or a top-level expression.
 func (p *Parser) parseStatement() Statement {
-	// Only treat IDENT (or tuple) as assignment if the pattern matches
-	if p.isAssignmentPattern() {
-		names := []*Identifier{{Value: p.curToken.Literal}}
-		for p.peekToken.Type == lexer.COMMA {
-			// Only collect names if the token after COMMA is IDENT and the one after that is ASSIGN
-			tok1 := p.peekTokenN(1)
-			tok2 := p.peekTokenN(2)
-			if tok1.Type == lexer.IDENT && tok2.Type == lexer.ASSIGN {
-				p.nextToken() // move to COMMA
-				p.nextToken() // move to IDENT
-				names = append(names, &Identifier{Value: p.curToken.Literal})
-				break // stop after this name, next is ASSIGN
-			} else if tok1.Type == lexer.IDENT {
-				p.nextToken() // move to COMMA
-				p.nextToken() // move to IDENT
-				names = append(names, &Identifier{Value: p.curToken.Literal})
-			} else {
-				break
-			}
-		}
-		p.nextToken() // move to ASSIGN
-		return p.parseAssignmentWithNames(names)
+if p.isAssignmentPattern() {
+	// starts at the first IDENT
+    names := []*Identifier{{Value: p.curToken.Literal}}
+    
+    for p.peekToken.Type == lexer.COMMA {
+        p.nextToken()
+        p.nextToken()
+        names = append(names, &Identifier{Value: p.curToken.Literal})
+    }
+    
+    p.nextToken()
+    return p.parseAssignmentWithNames(names)
 	}
 	switch p.curToken.Type {
 	case lexer.FUNCTION:
@@ -157,87 +203,24 @@ func (p *Parser) parseStatement() Statement {
 }
 
 func (p *Parser) parseAssignmentWithNames(names []*Identifier) *Assignment {
-	if p.curToken.Type != lexer.ASSIGN {
-		p.addError(utils.ParseError{
-			Kind:    utils.InvalidSyntax,
-			Message: "expected '=' in assignment",
-			Line:    p.curToken.Line,
-			Column:  p.curToken.Column,
-		})
-		p.nextToken()
-		// Always return a dummy assignment for tuple destructuring
-		if len(names) > 1 {
-			elems := make([]Expression, len(names))
-			for i := range elems {
-				elems[i] = &Literal{Value: nil}
-			}
-			return &Assignment{Names: names, Value: &Array{Elements: elems}}
+	fmt.Println(p.curToken, p.peekToken)
+	
+	if len(names) > 1 {
+		result := p.parseTupleAssignment(names)
+		if result != nil {
+			return result
 		}
-		return nil
 	}
 	p.nextToken()
 	var value Expression
 	if len(names) > 1 {
-		var elems []Expression
-		if p.curToken.Type == lexer.LBRACKET {
-			arr := p.parseArray()
-			arrayNode, ok := arr.(*Array)
-			if !ok || arrayNode == nil {
-				p.addError(utils.ParseError{
-					Kind:    utils.InvalidSyntax,
-					Message: "invalid array on right-hand side of tuple assignment",
-					Line:    p.curToken.Line,
-					Column:  p.curToken.Column,
-				})
-				elems = make([]Expression, len(names))
-				for i := range elems {
-					elems[i] = &Literal{Value: nil}
-				}
-				return &Assignment{Names: names, Value: &Array{Elements: elems}}
-			}
-			elems = arrayNode.Elements
-		} else {
-			elems = []Expression{}
-			first := p.parseExpression()
-			if first != nil {
-				elems = append(elems, first)
-			}
-			for p.curToken.Type == lexer.COMMA {
-				p.nextToken()
-				expr := p.parseExpression()
-				if expr != nil {
-					elems = append(elems, expr)
-				}
-			}
-		}
-		// Pad or truncate to match names
-		for len(elems) < len(names) {
-			elems = append(elems, &Literal{Value: nil})
-		}
-		if len(elems) > len(names) {
-			elems = elems[:len(names)]
-		}
-		// Replace any nils with Literal{Value: nil}
-		for i := range elems {
-			if elems[i] == nil {
-				elems[i] = &Literal{Value: nil}
-			}
-		}
-		// Always return a non-nil Array
-		if elems == nil {
-			elems = make([]Expression, len(names))
-			for i := range elems {
-				elems[i] = &Literal{Value: nil}
-			}
-		}
-		value = &Array{Elements: elems}
-		// Advance past the right-hand side if needed
-		if p.curToken.Type == lexer.COMMA {
-			p.nextToken()
-		}
-		if p.curToken.Type == lexer.EOF {
-			p.nextToken()
-		}
+		p.addError(utils.ParseError{
+			Kind:    utils.InvalidSyntax,
+			Message: "multiple names without comma should be handled by parseTupleAssignment",
+			Line:    p.curToken.Line,
+			Column:  p.curToken.Column,
+		})
+		return nil
 	} else {
 		value = p.parseExpression()
 		if p.curToken.Type == lexer.COMMA {
@@ -255,18 +238,8 @@ func (p *Parser) parseAssignmentWithNames(names []*Identifier) *Assignment {
 			Column:  p.curToken.Column,
 		})
 		p.nextToken()
-		// Always return a dummy assignment for tuple destructuring
-		if len(names) > 1 {
-			elems := make([]Expression, len(names))
-			for i := range elems {
-				elems[i] = &Literal{Value: nil}
-			}
-			return &Assignment{Names: names, Value: &Array{Elements: elems}}
-		}
 		return nil
 	}
-	// Debug printout
-	// fmt.Printf("Assignment: names=%v, value=%#v\n", names, value)
 	return &Assignment{Names: names, Value: value}
 }
 

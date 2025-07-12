@@ -68,6 +68,12 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
+// peekTokenN safely peeks n tokens ahead without advancing the parser state.
+// n=1 returns the next token, n=2 returns the token after that, etc.
+func (p *Parser) peekTokenN(n int) lexer.Token {
+	return p.l.PeekToken(n)
+}
+
 func (p *Parser) expect(t lexer.TokenType) bool {
 	if p.curToken.Type != t {
 		// Get the code snippet
@@ -115,4 +121,9 @@ func programToASTNode(prog *Program) *ASTNode {
 		NodeKind: TranslationUnitKind,
 		Inner:    stmts,
 	}
+}
+
+func (p *Parser) printTokenDebug(fn string) {
+	fmt.Printf("🍕 [%s] curToken: %s '%s' (line %d, col %d)\n", fn, p.curToken.Type, p.curToken.Literal, p.curToken.Line, p.curToken.Column)
+	fmt.Printf("🍕 [%s] peekToken: %s '%s' (line %d, col %d)\n", fn, p.peekToken.Type, p.peekToken.Literal, p.peekToken.Line, p.peekToken.Column)
 }
