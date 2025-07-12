@@ -1,0 +1,24 @@
+[project]
+name = "helloworld"
+version = "0.1.0"
+author = "luohoa97"
+description = "A test for Aether compiler 0.2.0"
+
+[build]
+source_directories = ["src"]
+output_directory = "bin"
+target = "native"
+optimization = "2"
+linker = "mold"
+create_library = false
+library_type = "shared"
+
+[dependencies]
+# Add your dependencies here
+stdio = "../../packages/c/src/stdio.ae"
+# stdlib = "packages/stdlib"
+# utils = "packages/utils"
+
+[dev-dependencies]
+# Add development dependencies here
+# linter = "packages/linter"

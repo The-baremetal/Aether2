@@ -1,0 +1,3 @@
+[dependencies]
+  [dependencies.stdio]
+    path = "../../packages/c/src/stdio.ae"

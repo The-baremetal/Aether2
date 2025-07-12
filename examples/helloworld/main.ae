@@ -1,2 +1,0 @@
-import depmod
-print(depmod.exported_value) 
