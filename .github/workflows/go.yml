@@ -72,7 +72,7 @@ jobs:
           mkdir -p dist
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          go build -o dist/aether-${GOOS}_${GOARCH}${EXT} .
+          go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
 
       - name: Package formats for Linux
         if: matrix.os == 'linux'
