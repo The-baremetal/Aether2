@@ -99,7 +99,7 @@ jobs:
           fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin -p dist/aether-${GOOS}_${GOARCH}.rpm dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether
 
           # .appimage
-          if [ "$GOARCH" != "riscv64" ]; then
+          if [ "$GOARCH" != "riscv64" ] && [ "$GOARCH" != "ppc64le" ]; then
             mkdir -p AppDir/usr/bin
             cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
             cp assets/icon-256x256.png AppDir/icon-256x256.png
