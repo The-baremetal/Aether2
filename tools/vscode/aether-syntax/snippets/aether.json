@@ -1,0 +1,231 @@
+{
+  "Function Definition": {
+    "prefix": "func",
+    "body": [
+      "func ${1:functionName}(${2:params}) {",
+      "\t${3:// function body}",
+      "}"
+    ],
+    "description": "Create a function definition"
+  },
+  "If Statement": {
+    "prefix": "if",
+    "body": [
+      "if ${1:condition} {",
+      "\t${2:// code}",
+      "}"
+    ],
+    "description": "Create an if statement"
+  },
+  "If-Else Statement": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition} {",
+      "\t${2:// code}",
+      "} else {",
+      "\t${3:// else code}",
+      "}"
+    ],
+    "description": "Create an if-else statement"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "for ${1:item} in ${2:array} {",
+      "\t${3:// loop body}",
+      "}"
+    ],
+    "description": "Create a for loop"
+  },
+  "For Loop with Index": {
+    "prefix": "fori",
+    "body": [
+      "for ${1:i}, ${2:item} in ${3:array} {",
+      "\t${4:// loop body}",
+      "}"
+    ],
+    "description": "Create a for loop with index"
+  },
+  "While Loop": {
+    "prefix": "while",
+    "body": [
+      "while ${1:condition} {",
+      "\t${2:// loop body}",
+      "}"
+    ],
+    "description": "Create a while loop"
+  },
+  "Repeat Loop": {
+    "prefix": "repeat",
+    "body": [
+      "repeat(${1:count}) {",
+      "\t${2:// loop body}",
+      "}"
+    ],
+    "description": "Create a repeat loop"
+  },
+  "Struct Definition": {
+    "prefix": "struct",
+    "body": [
+      "struct ${1:StructName} {",
+      "\t${2:field}: ${3:type}",
+      "}"
+    ],
+    "description": "Create a struct definition"
+  },
+  "Try-Catch": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "\t${1:// risky code}",
+      "} catch (${2:err}) {",
+      "\t${3:// error handling}",
+      "}"
+    ],
+    "description": "Create a try-catch block"
+  },
+  "Try-Catch-Finally": {
+    "prefix": "tryf",
+    "body": [
+      "try {",
+      "\t${1:// risky code}",
+      "} catch (${2:err}) {",
+      "\t${3:// error handling}",
+      "} finally {",
+      "\t${4:// cleanup}",
+      "}"
+    ],
+    "description": "Create a try-catch-finally block"
+  },
+  "Match Statement": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "\tcase ${2:pattern} {",
+      "\t\t${3:// code}",
+      "\t}",
+      "\tcase _ {",
+      "\t\t${4:// default}",
+      "\t}",
+      "}"
+    ],
+    "description": "Create a match statement"
+  },
+  "Import Statement": {
+    "prefix": "import",
+    "body": [
+      "import ${1:module}"
+    ],
+    "description": "Import a module"
+  },
+  "Import with Alias": {
+    "prefix": "importas",
+    "body": [
+      "import ${1:module} as ${2:alias}"
+    ],
+    "description": "Import a module with alias"
+  },
+  "Import String": {
+    "prefix": "imports",
+    "body": [
+      "import \"${1:module}\""
+    ],
+    "description": "Import a module with string"
+  },
+  "Print Statement": {
+    "prefix": "print",
+    "body": [
+      "print(${1:value})"
+    ],
+    "description": "Print to console"
+  },
+  "Return Statement": {
+    "prefix": "return",
+    "body": [
+      "return ${1:value}"
+    ],
+    "description": "Return a value"
+  },
+  "Variable Assignment": {
+    "prefix": "var",
+    "body": [
+      "${1:variable} = ${2:value}"
+    ],
+    "description": "Assign a variable"
+  },
+  "Array Literal": {
+    "prefix": "array",
+    "body": [
+      "[${1:item1}, ${2:item2}]"
+    ],
+    "description": "Create an array"
+  },
+  "Object Literal": {
+    "prefix": "obj",
+    "body": [
+      "{ ${1:key}: ${2:value} }"
+    ],
+    "description": "Create an object"
+  },
+  "Lambda Function": {
+    "prefix": "lambda",
+    "body": [
+      "${1:name} = {",
+      "\t${2:// lambda body}",
+      "}"
+    ],
+    "description": "Create a lambda function"
+  },
+  "Function Call": {
+    "prefix": "call",
+    "body": [
+      "${1:function}(${2:args})"
+    ],
+    "description": "Call a function"
+  },
+  "Method Chaining": {
+    "prefix": "chain",
+    "body": [
+      "${1:object}",
+      "\t.${2:method1}()",
+      "\t.${3:method2}()",
+      "\t.${4:method3}()"
+    ],
+    "description": "Create method chaining"
+  },
+  "Break Statement": {
+    "prefix": "break",
+    "body": [
+      "break"
+    ],
+    "description": "Break from loop"
+  },
+  "Continue Statement": {
+    "prefix": "continue",
+    "body": [
+      "continue"
+    ],
+    "description": "Continue to next iteration"
+  },
+  "Comment": {
+    "prefix": "//",
+    "body": [
+      "// ${1:comment}"
+    ],
+    "description": "Single line comment"
+  },
+  "Block Comment": {
+    "prefix": "/*",
+    "body": [
+      "/* ${1:comment} */"
+    ],
+    "description": "Block comment"
+  },
+  "Doc Comment": {
+    "prefix": "///",
+    "body": [
+      "/// ${1:documentation}"
+    ],
+    "description": "Documentation comment"
+  }
+} 

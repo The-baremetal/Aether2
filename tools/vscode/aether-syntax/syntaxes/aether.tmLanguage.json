@@ -1,93 +1,220 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Aether",
-	"patterns": [
-		{ "include": "#comments" },
-		{ "include": "#keywords" },
-		{ "include": "#types" },
-		{ "include": "#booleans" },
-		{ "include": "#numbers" },
-		{ "include": "#strings" },
-		{ "include": "#functions" }
-	],
-	"repository": {
-		"comments": {
-			"patterns": [
-				{
-					"name": "comment.line.double-slash.aether",
-					"begin": "///",
-					"end": "$",
-					"patterns": []
-				},
-				{
-					"name": "comment.line.double-slash.aether",
-					"begin": "//",
-					"end": "$",
-					"patterns": []
-				},
-				{
-					"name": "comment.block.aether",
-					"begin": "\\/\\*",
-					"end": "\\*\\/",
-					"patterns": []
-				}
-			]
-		},
-		"keywords": {
-			"patterns": [
-				{
-					"name": "keyword.control.aether",
-					"match": "\\b(func|struct|import|as|if|else|match|case|for|in|repeat|while|break|continue|return|try|catch|finally)\\b"
-				}
-			]
-		},
-		"types": {
-			"patterns": [
-				{
-					"name": "storage.type.aether",
-					"match": "\\b(int|bool|string|float|void|any)\\b"
-				}
-			]
-		},
-		"booleans": {
-			"patterns": [
-				{
-					"name": "constant.language.boolean.aether",
-					"match": "\\b(true|false|null)\\b"
-				}
-			]
-		},
-		"numbers": {
-			"patterns": [
-				{
-					"name": "constant.numeric.aether",
-					"match": "\\b[0-9]+(\\.[0-9]+)?\\b"
-				}
-			]
-		},
-		"strings": {
-			"name": "string.quoted.double.aether",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.aether",
-					"match": "\\\\."
-				}
-			]
-		},
-		"functions": {
-			"patterns": [
-				{
-					"name": "entity.name.function.aether",
-					"match": "(?<=func )([a-zA-Z_][a-zA-Z0-9_]*)"
-				},
-				{
-					"name": "support.function.aether",
-					"match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
-				}
-			]
-		}
-	},
-	"scopeName": "source.aether"
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Aether",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#booleans" },
+    { "include": "#numbers" },
+    { "include": "#strings" },
+    { "include": "#functions" },
+    { "include": "#operators" },
+    { "include": "#punctuation" },
+    { "include": "#identifiers" },
+    { "include": "#arrays" },
+    { "include": "#structs" },
+    { "include": "#imports" },
+    { "include": "#chaining" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.doc.aether",
+          "begin": "///",
+          "end": "$",
+          "patterns": []
+        },
+        {
+          "name": "comment.line.double-slash.aether",
+          "begin": "//",
+          "end": "$",
+          "patterns": []
+        },
+        {
+          "name": "comment.block.aether",
+          "begin": "\\/\\*",
+          "end": "\\*\\/",
+          "patterns": []
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.aether",
+          "match": "\\b(func|struct|import|as|if|else|match|case|for|in|repeat|while|break|continue|return|try|catch|finally|package)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.aether",
+          "match": "\\b(int|bool|string|float|void|any|number)\\b"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.aether",
+          "match": "\\b(true|false|null|undefined)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.integer.aether",
+          "match": "\\b[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.aether",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.aether",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.aether",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.aether",
+          "match": "(?<=func )([a-zA-Z_][a-zA-Z0-9_]*)"
+        },
+        {
+          "name": "support.function.aether",
+          "match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arithmetic.aether",
+          "match": "\\b(\\+|\\-|\\*|\\/|\\%|\\^)\\b"
+        },
+        {
+          "name": "keyword.operator.comparison.aether",
+          "match": "\\b(==|!=|<|<=|>|>=)\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.aether",
+          "match": "\\b=\\b"
+        },
+        {
+          "name": "keyword.operator.concatenation.aether",
+          "match": "\\b\\.\\.\\b"
+        },
+        {
+          "name": "keyword.operator.varargs.aether",
+          "match": "\\b\\.\\.\\.\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.comma.aether",
+          "match": ","
+        },
+        {
+          "name": "punctuation.separator.colon.aether",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.definition.bracket.square.aether",
+          "match": "\\[|\\]"
+        },
+        {
+          "name": "punctuation.definition.bracket.round.aether",
+          "match": "\\(|\\)"
+        },
+        {
+          "name": "punctuation.definition.bracket.curly.aether",
+          "match": "\\{|\\}"
+        },
+        {
+          "name": "punctuation.definition.accessor.aether",
+          "match": "\\."
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.aether",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "arrays": {
+      "patterns": [
+        {
+          "name": "meta.array.aether",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            { "include": "#numbers" },
+            { "include": "#strings" },
+            { "include": "#booleans" },
+            { "include": "#identifiers" },
+            { "include": "#punctuation" }
+          ]
+        }
+      ]
+    },
+    "structs": {
+      "patterns": [
+        {
+          "name": "meta.struct.aether",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "name": "meta.struct.field.aether",
+              "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*:"
+            },
+            { "include": "#numbers" },
+            { "include": "#strings" },
+            { "include": "#booleans" },
+            { "include": "#identifiers" },
+            { "include": "#punctuation" }
+          ]
+        }
+      ]
+    },
+    "imports": {
+      "patterns": [
+        {
+          "name": "meta.import.aether",
+          "match": "\\bimport\\b"
+        },
+        {
+          "name": "string.quoted.import.aether",
+          "match": "\"[^\"]*\""
+        }
+      ]
+    },
+    "chaining": {
+      "patterns": [
+        {
+          "name": "meta.chaining.aether",
+          "match": "\\s*\\.\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\("
+        }
+      ]
+    }
+  },
+  "scopeName": "source.aether"
 }

@@ -2,7 +2,7 @@
   "name": "aether-syntax",
   "displayName": "Aether Syntax",
   "description": "Aether programming language syntax highlighting and autocomplete support",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-3.0",
   "engines": {
     "vscode": "^1.74.0"
