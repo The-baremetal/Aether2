@@ -42,26 +42,6 @@ jobs:
             arch: 386
           - os: freebsd
             arch: arm64
-          - os: netbsd
-            arch: amd64
-          - os: netbsd
-            arch: 386
-          - os: netbsd
-            arch: arm64
-          - os: openbsd
-            arch: amd64
-          - os: openbsd
-            arch: 386
-          - os: openbsd
-            arch: arm64
-          - os: android
-            arch: amd64
-          - os: android
-            arch: arm64
-          - os: android
-            arch: 386
-          - os: android
-            arch: arm
     env:
       GOOS: ${{ matrix.os }}
       GOARCH: ${{ matrix.arch }}
@@ -144,40 +124,6 @@ jobs:
           cp dist/aether-${GOOS}_${GOARCH} tarball/aether
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
 
-      - name: Package formats for macOS
-        if: matrix.os == 'darwin'
-        run: |
-          EXT=""
-          BIN=dist/aether-${GOOS}_${GOARCH}${EXT}
-          mkdir -p dist/macos_pkgroot/usr/local/bin
-          cp "$BIN" dist/macos_pkgroot/usr/local/bin/aether
-
-          pkgbuild \
-            --identifier org.aether.pkg \
-            --version 1.0.0 \
-            --install-location /usr/local/bin \
-            --root dist/macos_pkgroot/usr/local/bin \
-            dist/aether-${GOOS}_${GOARCH}.pkg
-
-          mkdir -p dmg
-          cp "$BIN" dmg/aether
-          hdiutil create -volname Aether \
-            -srcfolder dmg \
-            -ov \
-            -format UDZO \
-            dist/aether-${GOOS}_${GOARCH}.dmg
-
-          mkdir -p tarball
-          cp "$BIN" tarball/aether
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
-
-      - name: Package formats for BSD and Android
-        if: contains('freebsd netbsd openbsd android', matrix.os)
-        run: |
-          mkdir -p tarball
-          cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/aether
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -188,8 +134,6 @@ jobs:
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.deb
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.rpm
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.pkg
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.dmg
             dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
 
   release:
@@ -211,7 +155,7 @@ jobs:
       - name: List downloaded files
         run: ls -R dist
 
-      - name: Flatten artifacts
+      - name: Flatten artifacts (optional but very neat)
         run: |
           mkdir flat
           find dist -type f -exec cp {} flat/ \;
