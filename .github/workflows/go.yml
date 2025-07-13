@@ -85,36 +85,11 @@ jobs:
           chmod +x appimagetool-x86_64.AppImage
           sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
 
-      - name: Setup Android NDK (for Android CGO)
-        if: matrix.os == 'android'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip wget
-          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O android-ndk.zip
-          unzip -q android-ndk.zip
-          echo "ANDROID_NDK_HOME=$(pwd)/android-ndk-r25b" >> $GITHUB_ENV
-          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
-
       - name: Build binary
         run: |
           mkdir -p dist
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-
-          if [ "$GOOS" = "android" ]; then
-            export CGO_ENABLED=1
-            export CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
-            export CXX="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
-            if [ "$GOARCH" = "amd64" ]; then TARGET_HOST="x86_64-linux-android"; fi
-            if [ "$GOARCH" = "386" ]; then TARGET_HOST="i686-linux-android"; fi
-            if [ "$GOARCH" = "arm" ]; then TARGET_HOST="armv7a-linux-androideabi"; fi
-            if [ "$GOARCH" = "arm64" ]; then TARGET_HOST="aarch64-linux-android"; fi
-            export CC="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/${TARGET_HOST}21-clang"
-            export CXX="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/${TARGET_HOST}21-clang++"
-          else
-            export CGO_ENABLED=0
-          fi
-
           go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
 
       - name: Package formats for Linux
@@ -199,7 +174,6 @@ jobs:
       - name: Package formats for BSD and Android
         if: contains('freebsd netbsd openbsd android', matrix.os)
         run: |
-          mkdir -p tarball
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
           cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/aether
