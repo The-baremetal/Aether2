@@ -62,6 +62,7 @@ jobs:
             arch: 386
           - os: android
             arch: arm
+
     env:
       GOOS: ${{ matrix.os }}
       GOARCH: ${{ matrix.arch }}
@@ -75,7 +76,7 @@ jobs:
         with:
           go-version: '1.24.1'
 
-      - name: Install dependencies (fpm, dpkg, appimage)
+      - name: Install Linux deps (fpm, dpkg, appimage)
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
@@ -85,12 +86,47 @@ jobs:
           chmod +x appimagetool-x86_64.AppImage
           sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
 
+      - name: Setup Android NDK (only for android)
+        if: matrix.os == 'android'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip wget
+          ANDROID_NDK_VERSION=r25b
+          wget https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+          unzip android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+          echo "ANDROID_NDK_HOME=$(pwd)/android-ndk-${ANDROID_NDK_VERSION}" >> $GITHUB_ENV
+          export ANDROID_NDK_HOME=$(pwd)/android-ndk-${ANDROID_NDK_VERSION}
+
       - name: Build binary
         run: |
           mkdir -p dist
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+
+          if [ "$GOOS" = "android" ]; then
+            export CGO_ENABLED=1
+            export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+            export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
+            case "$GOARCH" in
+              amd64)
+                export CC=x86_64-linux-android21-clang
+                ;;
+              arm64)
+                export CC=aarch64-linux-android21-clang
+                ;;
+              386)
+                export CC=i686-linux-android21-clang
+                ;;
+              arm)
+                export CC=armv7a-linux-androideabi21-clang
+                ;;
+            esac
+
+            GOOS=android GOARCH=$GOARCH CGO_ENABLED=1 CC=$CC go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+          else
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+          fi
 
       - name: Package formats for Linux
         if: matrix.os == 'linux'
