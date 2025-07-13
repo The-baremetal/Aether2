@@ -10,38 +10,89 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
+          # Linux builds
           - os: linux
             arch: amd64
+            runner: ubuntu-latest
           - os: linux
             arch: arm64
+            runner: ubuntu-latest
           - os: linux
             arch: 386
+            runner: ubuntu-latest
           - os: linux
             arch: arm
+            runner: ubuntu-latest
           - os: linux
             arch: ppc64le
+            runner: ubuntu-latest
           - os: linux
             arch: riscv64
+            runner: ubuntu-latest
+          # Windows builds
           - os: windows
             arch: amd64
+            runner: ubuntu-latest
           - os: windows
             arch: 386
+            runner: ubuntu-latest
           - os: windows
             arch: arm64
+            runner: ubuntu-latest
+          # macOS builds - use macOS runner
           - os: darwin
             arch: amd64
+            runner: macos-latest
           - os: darwin
             arch: arm64
+            runner: macos-latest
+          # BSD builds
           - os: freebsd
             arch: amd64
+            runner: ubuntu-latest
           - os: freebsd
             arch: 386
+            runner: ubuntu-latest
           - os: freebsd
             arch: arm64
+            runner: ubuntu-latest
+          - os: netbsd
+            arch: amd64
+            runner: ubuntu-latest
+          - os: netbsd
+            arch: 386
+            runner: ubuntu-latest
+          - os: netbsd
+            arch: arm64
+            runner: ubuntu-latest
+          - os: openbsd
+            arch: amd64
+            runner: ubuntu-latest
+          - os: openbsd
+            arch: 386
+            runner: ubuntu-latest
+          - os: openbsd
+            arch: arm64
+            runner: ubuntu-latest
+          # Android builds
+          - os: android
+            arch: amd64
+            runner: ubuntu-latest
+          - os: android
+            arch: arm64
+            runner: ubuntu-latest
+          - os: android
+            arch: 386
+            runner: ubuntu-latest
+          - os: android
+            arch: arm
+            runner: ubuntu-latest
+
+    runs-on: ${{ matrix.runner }}
+    
     env:
       GOOS: ${{ matrix.os }}
       GOARCH: ${{ matrix.arch }}
@@ -55,8 +106,8 @@ jobs:
         with:
           go-version: '1.24.1'
 
-      - name: Install dependencies (fpm, dpkg, appimage)
-        if: matrix.os == 'linux'
+      - name: Install Linux deps (fpm, dpkg, appimage)
+        if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev libfuse2
@@ -65,15 +116,50 @@ jobs:
           chmod +x appimagetool-x86_64.AppImage
           sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
 
+      - name: Setup Android NDK (only for android)
+        if: matrix.os == 'android'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip wget
+          ANDROID_NDK_VERSION=r25b
+          wget https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+          unzip android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+          echo "ANDROID_NDK_HOME=$(pwd)/android-ndk-${ANDROID_NDK_VERSION}" >> $GITHUB_ENV
+          export ANDROID_NDK_HOME=$(pwd)/android-ndk-${ANDROID_NDK_VERSION}
+
       - name: Build binary
         run: |
           mkdir -p dist
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+
+          if [ "$GOOS" = "android" ]; then
+            export CGO_ENABLED=1
+            export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+            export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
+            case "$GOARCH" in
+              amd64)
+                export CC=x86_64-linux-android21-clang
+                ;;
+              arm64)
+                export CC=aarch64-linux-android21-clang
+                ;;
+              386)
+                export CC=i686-linux-android21-clang
+                ;;
+              arm)
+                export CC=armv7a-linux-androideabi21-clang
+                ;;
+            esac
+
+            GOOS=android GOARCH=$GOARCH CGO_ENABLED=1 CC=$CC go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+          else
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
+          fi
 
       - name: Package formats for Linux
-        if: matrix.os == 'linux'
+        if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
           mkdir -p dist/pkgroot/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/bin/aether
@@ -124,17 +210,55 @@ jobs:
           cp dist/aether-${GOOS}_${GOARCH} tarball/aether
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
 
+      - name: Package formats for macOS
+        if: matrix.os == 'darwin' && matrix.runner == 'macos-latest'
+        run: |
+          EXT=""
+          BIN=dist/aether-${GOOS}_${GOARCH}${EXT}
+          mkdir -p dist/macos_pkgroot/usr/local/bin
+          cp "$BIN" dist/macos_pkgroot/usr/local/bin/aether
+
+          pkgbuild \
+            --identifier org.aether.pkg \
+            --version 1.0.0 \
+            --install-location /usr/local/bin \
+            --root dist/macos_pkgroot/usr/local/bin \
+            dist/aether-${GOOS}_${GOARCH}.pkg
+
+          mkdir -p dmg
+          cp "$BIN" dmg/aether
+          hdiutil create -volname Aether \
+            -srcfolder dmg \
+            -ov \
+            -format UDZO \
+            dist/aether-${GOOS}_${GOARCH}.dmg
+
+          mkdir -p tarball
+          cp "$BIN" tarball/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+
+      - name: Package formats for Windows
+        if: matrix.os == 'windows' && matrix.runner == 'ubuntu-latest'
+        run: |
+          mkdir -p tarball
+          cp dist/aether-${GOOS}_${GOARCH}.exe tarball/aether.exe
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether.exe
+
+      - name: Package formats for BSD and Android
+        if: contains('freebsd netbsd openbsd android', matrix.os)
+        run: |
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+          mkdir -p tarball
+          cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: aether-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.tar
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.deb
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.rpm
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}*
 
   release:
     needs: build
@@ -155,7 +279,7 @@ jobs:
       - name: List downloaded files
         run: ls -R dist
 
-      - name: Flatten artifacts (optional but very neat)
+      - name: Flatten artifacts
         run: |
           mkdir flat
           find dist -type f -exec cp {} flat/ \;
