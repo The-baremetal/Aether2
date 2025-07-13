@@ -90,6 +90,13 @@ jobs:
           mkdir -p dist
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+
+          if [ "$GOOS" = "android" ]; then
+            export CGO_ENABLED=1
+          else
+            export CGO_ENABLED=0
+          fi
+
           go build -o dist/aether-${GOOS}_${GOARCH}${EXT} ./cmd/aether2/
 
       - name: Package formats for Linux
@@ -174,6 +181,9 @@ jobs:
       - name: Package formats for BSD and Android
         if: contains('freebsd netbsd openbsd android', matrix.os)
         run: |
+          EXT=""
+          if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+
           mkdir -p tarball
           cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/aether
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
