@@ -10,59 +10,89 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
+          # Linux builds
           - os: linux
             arch: amd64
+            runner: ubuntu-latest
           - os: linux
             arch: arm64
+            runner: ubuntu-latest
           - os: linux
             arch: 386
+            runner: ubuntu-latest
           - os: linux
             arch: arm
+            runner: ubuntu-latest
           - os: linux
             arch: ppc64le
+            runner: ubuntu-latest
           - os: linux
             arch: riscv64
+            runner: ubuntu-latest
+          # Windows builds
           - os: windows
             arch: amd64
+            runner: ubuntu-latest
           - os: windows
             arch: 386
+            runner: ubuntu-latest
           - os: windows
             arch: arm64
+            runner: ubuntu-latest
+          # macOS builds - use macOS runner
           - os: darwin
             arch: amd64
+            runner: macos-latest
           - os: darwin
             arch: arm64
+            runner: macos-latest
+          # BSD builds
           - os: freebsd
             arch: amd64
+            runner: ubuntu-latest
           - os: freebsd
             arch: 386
+            runner: ubuntu-latest
           - os: freebsd
             arch: arm64
+            runner: ubuntu-latest
           - os: netbsd
             arch: amd64
+            runner: ubuntu-latest
           - os: netbsd
             arch: 386
+            runner: ubuntu-latest
           - os: netbsd
             arch: arm64
+            runner: ubuntu-latest
           - os: openbsd
             arch: amd64
+            runner: ubuntu-latest
           - os: openbsd
             arch: 386
+            runner: ubuntu-latest
           - os: openbsd
             arch: arm64
+            runner: ubuntu-latest
+          # Android builds
           - os: android
             arch: amd64
+            runner: ubuntu-latest
           - os: android
             arch: arm64
+            runner: ubuntu-latest
           - os: android
             arch: 386
+            runner: ubuntu-latest
           - os: android
             arch: arm
+            runner: ubuntu-latest
 
+    runs-on: ${{ matrix.runner }}
+    
     env:
       GOOS: ${{ matrix.os }}
       GOARCH: ${{ matrix.arch }}
@@ -77,7 +107,7 @@ jobs:
           go-version: '1.24.1'
 
       - name: Install Linux deps (fpm, dpkg, appimage)
-        if: matrix.os == 'linux'
+        if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev libfuse2
@@ -129,7 +159,7 @@ jobs:
           fi
 
       - name: Package formats for Linux
-        if: matrix.os == 'linux'
+        if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
           mkdir -p dist/pkgroot/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/bin/aether
@@ -181,7 +211,7 @@ jobs:
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
 
       - name: Package formats for macOS
-        if: matrix.os == 'darwin'
+        if: matrix.os == 'darwin' && matrix.runner == 'macos-latest'
         run: |
           EXT=""
           BIN=dist/aether-${GOOS}_${GOARCH}${EXT}
@@ -207,6 +237,13 @@ jobs:
           cp "$BIN" tarball/aether
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
 
+      - name: Package formats for Windows
+        if: matrix.os == 'windows' && matrix.runner == 'ubuntu-latest'
+        run: |
+          mkdir -p tarball
+          cp dist/aether-${GOOS}_${GOARCH}.exe tarball/aether.exe
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether.exe
+
       - name: Package formats for BSD and Android
         if: contains('freebsd netbsd openbsd android', matrix.os)
         run: |
@@ -221,14 +258,7 @@ jobs:
         with:
           name: aether-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.tar
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.deb
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.rpm
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.appimage
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.pkg
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.dmg
-            dist/aether-${{ matrix.os }}_${{ matrix.arch }}.exe
+            dist/aether-${{ matrix.os }}_${{ matrix.arch }}*
 
   release:
     needs: build
