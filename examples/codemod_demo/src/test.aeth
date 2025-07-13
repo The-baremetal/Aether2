@@ -1,0 +1,20 @@
+import "stdlib";
+import "utils";
+
+func add(a, b) {
+  return a + b;
+}
+
+func multiply(x, y) {
+  let result = x * y;
+  return result;
+}
+
+func greet(name) {
+  print("Hello, " + name + "!");
+}
+
+x = 10;
+y = 20;
+result = add(x, y);
+print("Result: " + result); 

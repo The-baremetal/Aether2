@@ -155,6 +155,7 @@ Repository:   https://github.com/aether-lang/aether`,
 	rootCmd.AddCommand(PlaygroundCmd)
 	rootCmd.AddCommand(PackageCmd)
 	rootCmd.AddCommand(NewCmd)
+	rootCmd.AddCommand(CodemodCmd)
 
 	// Setup completion
 	setupCompletion(rootCmd)

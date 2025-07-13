@@ -2,7 +2,7 @@ package main
 
 import (
 	"aether/src/analysis"
-	"aether/src/compiler"
+	compiler_pkg "aether/src/compiler"
 	"aether/src/lexer"
 	"aether/src/parser"
 	"fmt"
@@ -19,6 +19,7 @@ import (
 )
 
 // Project configuration structure
+
 type ProjectConfig struct {
 	Project struct {
 		Name        string `toml:"name"`
@@ -35,6 +36,8 @@ type ProjectConfig struct {
 		Linker            string   `toml:"linker,omitempty"`
 		CreateLibrary     bool     `toml:"create_library,omitempty"`
 		LibraryType       string   `toml:"library_type,omitempty"`
+		CompilerFlags     compiler_pkg.CompilerFlags `toml:"compiler_flags,omitempty"`
+		Targets           map[string]compiler_pkg.TargetConfig `toml:"target,omitempty"`
 	} `toml:"build"`
 
 	Dependencies map[string]string `toml:"dependencies,omitempty"`
@@ -71,6 +74,8 @@ func loadProjectConfig(projectRoot string) ProjectConfig {
 
 	return config
 }
+
+
 
 func parseTarget(target string) (string, string) {
 	switch target {
@@ -280,8 +285,23 @@ func doBuild(args []string) {
 		// Store config for later use
 		projectConfig = config
 
+		// Initialize flag merger for compiler flags
+		flagMerger := compiler_pkg.NewFlagMerger()
+		flagMerger.SetConfigFlags(config.Build.CompilerFlags, config.Build.Targets)
+		flagMerger.SetTargetOS(buildFlags.targetOS)
+		flagMerger.SetOptimization(buildFlags.optimization)
+		flagMerger.SetDebugInfo(buildFlags.debugInfo)
+
+		// Validate compiler flags
+		if err := flagMerger.ValidateFlags(); err != nil {
+			fmt.Printf("Warning: Invalid compiler flags: %v\n", err)
+		}
+
 		if !buildFlags.quiet {
 			fmt.Printf("Building aether project '%s' v%s\n", config.Project.Name, config.Project.Version)
+			if buildFlags.verbose {
+				fmt.Print(flagMerger.GetFlagSummary())
+			}
 		}
 	} else {
 		// Arguments provided - check if they're files or directories
@@ -475,7 +495,7 @@ func doBuild(args []string) {
 		moduleSymbols[moduleName] = extractModuleSymbols(ast)
 
 		// Compile with enhanced options
-		ir := compiler.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols)
+		ir := compiler_pkg.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols)
 
 		baseName := strings.TrimSuffix(file, ".ae")
 

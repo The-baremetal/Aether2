@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"aether/src/analysis"
+
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +42,10 @@ func doDocs(cmd *cobra.Command, args []string) {
 
 func generateDocs(path string) error {
 	// Find Aether files
-	files := findAetherFiles(path)
+	files, err := analysis.FindAetherFiles(path)
+	if err != nil {
+		return fmt.Errorf("failed to find Aether files: %v", err)
+	}
 	if len(files) == 0 {
 		fmt.Printf("🍕 No Aether files found in %s\n", path)
 		return nil
@@ -79,36 +84,7 @@ func generateDocs(path string) error {
 	return nil
 }
 
-func findAetherFiles(path string) []string {
-	var files []string
 
-	walkFunc := func(filePath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && strings.HasSuffix(filePath, ".aeth") {
-			files = append(files, filePath)
-		}
-		return nil
-	}
-
-	if docsFlags.recursive {
-		filepath.Walk(path, walkFunc)
-	} else {
-		// Only current directory
-		filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() && filePath != path {
-				return filepath.SkipDir
-			}
-			return walkFunc(filePath, info, err)
-		})
-	}
-
-	return files
-}
 
 func generateDocumentation(files []string) string {
 	var docs strings.Builder

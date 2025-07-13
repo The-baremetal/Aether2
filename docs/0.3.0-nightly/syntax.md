@@ -1,4 +1,74 @@
-Welcome to Aether! The language that stays fresh, simple, and delicious. No crusty old syntax, just pure code vibes. Here’s everything you need to know, all in one place!
+Welcome to Aether! The language that stays fresh, simple, and delicious. No crusty old syntax, just pure code vibes. Here's everything you need to know, all in one place!
+
+---
+
+## 0. Program Structure - Minimal Typing! 🍕
+
+Aether is designed for **minimal typing**. Write your code directly at the top level - no boilerplate needed!
+
+```aether
+// Just write your code directly!
+import stdio
+print("🍕 Hello from Aether!")
+x = 10
+y = 20
+print("Sum:", x + y)
+```
+
+**Key principles:**
+- ✅ **Top-level statements** - write code directly, no `func main()` required
+- ✅ **Minimal boilerplate** - no unnecessary function wrappers
+- ✅ **Direct execution** - your code runs immediately
+- ✅ **Import what you need** - `import stdio` gives you `print()`, `printf()`, etc.
+
+**Wrong (don't do this):**
+```aether
+func main() {
+  print("Hello!")
+}
+main()
+```
+
+**Right (do this):**
+```aether
+print("Hello!")
+```
+
+---
+
+## 0.5. Standard Library Usage 🍕
+
+Aether provides built-in functions through imports:
+
+```aether
+// Import stdio for basic I/O
+import stdio
+print("Hello!")           // Basic print
+stdio.printf("Formatted") // Formatted print
+
+// Import math for calculations
+import math
+result = math.add(5, 3)   // Addition
+sqrt = math.sqrt(16)      // Square root
+
+// Import with alias
+import math as m
+result = m.add(5, 3)
+```
+
+**Common stdlib functions:**
+- `print()` - Print to console
+- `printf()` - Formatted printing
+- `math.add()`, `math.sub()`, `math.mul()`, `math.div()` - Basic math
+- `math.sqrt()`, `math.pow()` - Advanced math
+- `string.len()`, `string.concat()` - String operations
+
+**No imports needed for basic operations:**
+```aether
+x = 10 + 5        // Basic arithmetic works without imports
+name = "Alice"     // String literals work
+arr = [1, 2, 3]   // Arrays work
+```
 
 ---
 

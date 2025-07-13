@@ -5,6 +5,6 @@ func main() {
     utils.print("🍕 Hello from customizable Aether!")
     utils.print("Building with custom configuration...")
     
-    let result = math.add(10, 20)
+    result = math.add(10, 20)
     utils.print("10 + 20 = " + result)
 } 

@@ -69,10 +69,8 @@ func doInit(args []string) {
 		mainFile := filepath.Join(sourceDir, "main.aeth")
 		mainSrc := []byte(fmt.Sprintf(`import "stdio"
 
-func main() {
-    stdio.printf("🍕 Hello from %s!")
-    stdio.printf("Your Aether project is ready to build!")
-}
+stdio.printf("🍕 Hello from %s!")
+stdio.printf("Your Aether project is ready to build!")
 `, projectName))
 		must(os.WriteFile(mainFile, mainSrc, 0644))
 	}

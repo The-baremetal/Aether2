@@ -1,0 +1,93 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Aether",
+	"patterns": [
+		{ "include": "#comments" },
+		{ "include": "#keywords" },
+		{ "include": "#types" },
+		{ "include": "#booleans" },
+		{ "include": "#numbers" },
+		{ "include": "#strings" },
+		{ "include": "#functions" }
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash.aether",
+					"begin": "///",
+					"end": "$",
+					"patterns": []
+				},
+				{
+					"name": "comment.line.double-slash.aether",
+					"begin": "//",
+					"end": "$",
+					"patterns": []
+				},
+				{
+					"name": "comment.block.aether",
+					"begin": "\\/\\*",
+					"end": "\\*\\/",
+					"patterns": []
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.aether",
+					"match": "\\b(func|struct|import|as|if|else|match|case|for|in|repeat|while|break|continue|return|try|catch|finally)\\b"
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "storage.type.aether",
+					"match": "\\b(int|bool|string|float|void|any)\\b"
+				}
+			]
+		},
+		"booleans": {
+			"patterns": [
+				{
+					"name": "constant.language.boolean.aether",
+					"match": "\\b(true|false|null)\\b"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric.aether",
+					"match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.aether",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.aether",
+					"match": "\\\\."
+				}
+			]
+		},
+		"functions": {
+			"patterns": [
+				{
+					"name": "entity.name.function.aether",
+					"match": "(?<=func )([a-zA-Z_][a-zA-Z0-9_]*)"
+				},
+				{
+					"name": "support.function.aether",
+					"match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+				}
+			]
+		}
+	},
+	"scopeName": "source.aether"
+}

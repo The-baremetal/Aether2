@@ -1,0 +1,41 @@
+{
+  "name": "aether-syntax",
+  "displayName": "Aether Syntax",
+  "description": "Aether programming language syntax highlighting and autocomplete support",
+  "version": "0.0.1",
+  "license": "GPL-3.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "aether",
+    "language",
+    "syntax",
+    "programming"
+  ],
+  "publisher": "aether-lang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/The-baremetal/Aether2"
+  },
+  "bugs": {
+    "url": "https://github.com/The-baremetal/Aether2/issues"
+  },
+  "homepage": "https://aetherc.vercel.app",
+  "contributes": {
+    "languages": [{
+      "id": "aether",
+      "aliases": ["Aether", "aether"],
+      "extensions": [".aeth"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "aether",
+      "scopeName": "source.aether",
+      "path": "./syntaxes/aether.tmLanguage.json"
+    }]
+  }
+}

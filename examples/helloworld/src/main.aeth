@@ -1,6 +1,4 @@
 import stdio
 
-func main() {
-    stdio.printf("🍕 Hello from helloworld!")
-    stdio.printf("Your Aether project is ready to build!")
-}
+stdio.printf("🍕 Hello from helloworld!")
+stdio.printf("Your Aether project is ready to build!")

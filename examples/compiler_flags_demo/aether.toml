@@ -1,0 +1,32 @@
+[project]
+name = "compiler-flags-demo"
+version = "1.0.0"
+author = "Aether Team"
+description = "Demonstration of compiler flags in aether.toml"
+
+[build]
+source_directories = ["src"]
+output_directory = "bin"
+target = "native"
+optimization = "2"
+linker = "mold"
+create_library = false
+library_type = "shared"
+
+[build.compiler_flags]
+global = ["-O2", "-g", "-Wall"]
+debug = ["-O0", "-g", "-DDEBUG", "-fno-omit-frame-pointer"]
+release = ["-O3", "-DNDEBUG", "-flto"]
+
+[build.target.'cfg(target_os = "linux")']
+compiler_flags = ["-fuse-ld=mold", "-static-libgcc"]
+
+[build.target.'cfg(target_os = "windows")']
+compiler_flags = ["-fuse-ld=lld", "-static"]
+
+[dependencies]
+stdlib = "packages/stdlib"
+utils = "packages/utils"
+
+[dev-dependencies]
+linter = "packages/linter" 
