@@ -161,9 +161,17 @@ jobs:
       - name: Package formats for Linux
         if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
+          # Create AETHERROOT directory structure
+          mkdir -p dist/pkgroot/usr/local/aether/bin
+          mkdir -p dist/pkgroot/usr/local/aether/packages
+          cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/aether/bin/aether
+          cp -r packages/* dist/pkgroot/usr/local/aether/packages/
+          
+          # Create symlink for backwards compatibility
           mkdir -p dist/pkgroot/usr/local/bin
-          cp dist/aether-${GOOS}_${GOARCH} dist/pkgroot/usr/local/bin/aether
+          ln -sf /usr/local/aether/bin/aether dist/pkgroot/usr/local/bin/aether
 
+          # DEB package
           mkdir -p dist/deb/DEBIAN
           cat > dist/deb/DEBIAN/control <<EOF
           Package: aether
@@ -174,12 +182,24 @@ jobs:
           Maintainer: Aether Dev <noreply@aether.org>
           Description: Aether Programming Language Binary
           EOF
+          mkdir -p dist/deb/usr/local/aether/bin
+          mkdir -p dist/deb/usr/local/aether/packages
           mkdir -p dist/deb/usr/local/bin
-          cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/bin/aether
+          cp dist/aether-${GOOS}_${GOARCH} dist/deb/usr/local/aether/bin/aether
+          cp -r packages/* dist/deb/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether dist/deb/usr/local/bin/aether
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
 
-          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} --prefix /usr/local/bin -p dist/aether-${GOOS}_${GOARCH}.rpm dist/aether-${GOOS}_${GOARCH}=/usr/local/bin/aether
+          # RPM package
+          mkdir -p dist/rpm_staging/usr/local/aether/bin
+          mkdir -p dist/rpm_staging/usr/local/aether/packages
+          mkdir -p dist/rpm_staging/usr/local/bin
+          cp dist/aether-${GOOS}_${GOARCH} dist/rpm_staging/usr/local/aether/bin/aether
+          cp -r packages/* dist/rpm_staging/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether dist/rpm_staging/usr/local/bin/aether
+          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} -C dist/rpm_staging -p dist/aether-${GOOS}_${GOARCH}.rpm .
 
+          # AppImage (if supported)
           if [ "$GOARCH" != "riscv64" ] && [ "$GOARCH" != "ppc64le" ]; then
             mkdir -p AppDir/usr/bin
             cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
@@ -206,52 +226,91 @@ jobs:
             echo "Skipping AppImage build for $GOARCH - not supported"
           fi
 
-          mkdir -p tarball
-          cp dist/aether-${GOOS}_${GOARCH} tarball/aether
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+          # Tarball with full AETHERROOT structure
+          mkdir -p tarball/usr/local/aether/bin
+          mkdir -p tarball/usr/local/aether/packages
+          mkdir -p tarball/usr/local/bin
+          cp dist/aether-${GOOS}_${GOARCH} tarball/usr/local/aether/bin/aether
+          cp -r packages/* tarball/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether tarball/usr/local/bin/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
       - name: Package formats for macOS
         if: matrix.os == 'darwin' && matrix.runner == 'macos-latest'
         run: |
           EXT=""
           BIN=dist/aether-${GOOS}_${GOARCH}${EXT}
+          
+          # Create AETHERROOT directory structure
+          mkdir -p dist/macos_pkgroot/usr/local/aether/bin
+          mkdir -p dist/macos_pkgroot/usr/local/aether/packages
           mkdir -p dist/macos_pkgroot/usr/local/bin
-          cp "$BIN" dist/macos_pkgroot/usr/local/bin/aether
+          cp "$BIN" dist/macos_pkgroot/usr/local/aether/bin/aether
+          cp -r packages/* dist/macos_pkgroot/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether dist/macos_pkgroot/usr/local/bin/aether
 
+          # PKG installer
           pkgbuild \
             --identifier org.aether.pkg \
             --version 1.0.0 \
-            --install-location /usr/local/bin \
-            --root dist/macos_pkgroot/usr/local/bin \
+            --install-location / \
+            --root dist/macos_pkgroot \
             dist/aether-${GOOS}_${GOARCH}.pkg
 
-          mkdir -p dmg
-          cp "$BIN" dmg/aether
+          # DMG with full structure
+          mkdir -p dmg/usr/local/aether/bin
+          mkdir -p dmg/usr/local/aether/packages
+          mkdir -p dmg/usr/local/bin
+          cp "$BIN" dmg/usr/local/aether/bin/aether
+          cp -r packages/* dmg/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether dmg/usr/local/bin/aether
           hdiutil create -volname Aether \
             -srcfolder dmg \
             -ov \
             -format UDZO \
             dist/aether-${GOOS}_${GOARCH}.dmg
 
-          mkdir -p tarball
-          cp "$BIN" tarball/aether
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+          # Tarball with full AETHERROOT structure
+          mkdir -p tarball/usr/local/aether/bin
+          mkdir -p tarball/usr/local/aether/packages
+          mkdir -p tarball/usr/local/bin
+          cp "$BIN" tarball/usr/local/aether/bin/aether
+          cp -r packages/* tarball/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether tarball/usr/local/bin/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
       - name: Package formats for Windows
         if: matrix.os == 'windows' && matrix.runner == 'ubuntu-latest'
         run: |
-          mkdir -p tarball
-          cp dist/aether-${GOOS}_${GOARCH}.exe tarball/aether.exe
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether.exe
+          # Create Windows directory structure (C:\Program Files\Aether equivalent)
+          mkdir -p tarball/Program\ Files/Aether/bin
+          mkdir -p tarball/Program\ Files/Aether/packages
+          cp dist/aether-${GOOS}_${GOARCH}.exe "tarball/Program Files/Aether/bin/aether.exe"
+          cp -r packages/* "tarball/Program Files/Aether/packages/"
+          
+          # Create a batch file for easier access
+          cat > "tarball/Program Files/Aether/aether.bat" <<EOF
+          @echo off
+          set AETHERROOT=%~dp0
+          "%AETHERROOT%bin\aether.exe" %*
+          EOF
+          
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
       - name: Package formats for BSD and Android
         if: contains('freebsd netbsd openbsd android', matrix.os)
         run: |
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          mkdir -p tarball
-          cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/aether
-          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball aether
+          
+          # Create AETHERROOT directory structure
+          mkdir -p tarball/usr/local/aether/bin
+          mkdir -p tarball/usr/local/aether/packages
+          mkdir -p tarball/usr/local/bin
+          cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/usr/local/aether/bin/aether
+          cp -r packages/* tarball/usr/local/aether/packages/
+          ln -sf /usr/local/aether/bin/aether tarball/usr/local/bin/aether
+          tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
