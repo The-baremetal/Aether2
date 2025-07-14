@@ -611,7 +611,7 @@ func init() {
 	flags.StringVar(&buildFlags.targetOS, "target-os", runtime.GOOS, "target operating system (linux, darwin, windows)")
 	flags.StringVar(&buildFlags.targetArch, "target-arch", runtime.GOARCH, "target architecture (amd64, arm64, 386, arm)")
 	flags.StringVar(&buildFlags.linker, "linker", getDefaultLinker(), "linker to use (mold, ld, lld)")
-	flags.StringVar(&buildFlags.outputName, "output", "bin/aether.out", "output executable name")
+	flags.StringVarP(&buildFlags.outputName, "output", "o", "bin/aether.out", "output executable name")
 	flags.StringVar(&buildFlags.fuseLd, "fuse-ld", "", "linker to use (like clang -fuse-ld)")
 
 	// Optimization flags

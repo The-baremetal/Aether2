@@ -61,6 +61,15 @@ func AnalyzeImportStatement(importStmt *parser.Import, filePath string, result *
 		result.Errors = append(result.Errors, fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath))
 	}
 
+	// 1. Check AETHERROOT stdlib first
+	if stdlibPath, found := ResolveStdlibImport(importPath); found {
+		importInfo.Exists = true
+		importInfo.Resolved = stdlibPath
+		result.Imports[importPath] = importInfo
+		return
+	}
+
+	// 2. Fallback to local/project resolution
 	resolvedPath := ResolveImportPath(importPath, filepath.Dir(filePath))
 	if resolvedPath != "" {
 		if _, err := os.Stat(resolvedPath); err == nil {

@@ -14,8 +14,8 @@ create_library = false
 library_type = "shared"
 
 [dependencies]
-stdlib = "packages/stdlib"
-utils = "packages/utils"
+fmt = "packages/fmt"
+math = "packages/math"
 c = "packages/c"
 aether_structures = "src/compiler/aether_structures.aeth"
 

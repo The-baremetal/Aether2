@@ -1,0 +1,8 @@
+[package]
+name = "fmt"
+version = "0.1.0"
+description = "Formatted I/O for Aether, similar to Go's fmt."
+authors = ["Aether Contributors"]
+
+[dependencies]
+c = "../c" 

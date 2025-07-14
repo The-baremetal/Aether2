@@ -1,5 +1,4 @@
-import "stdlib";
-import "utils";
+import "fmt";
 
 func add(a, b) {
   return a + b;
@@ -11,10 +10,10 @@ func multiply(x, y) {
 }
 
 func greet(name) {
-  print("Hello, " + name + "!");
+  fmt.println("Hello, " + name + "!");
 }
 
 x = 10;
 y = 20;
 result = add(x, y);
-print("Result: " + result); 
+fmt.println("Result: " + result); 

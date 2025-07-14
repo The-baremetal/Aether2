@@ -1,10 +1,10 @@
+import "fmt"
 import "math"
-import "utils"
 
 func main() {
-    utils.print("🍕 Hello from customizable Aether!")
-    utils.print("Building with custom configuration...")
+    fmt.print("🍕 Hello from customizable Aether!")
+    fmt.print("Building with custom configuration...")
     
     result = math.add(10, 20)
-    utils.print("10 + 20 = " + result)
+    fmt.print("10 + 20 = " + result)
 } 

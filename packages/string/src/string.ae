@@ -1,0 +1,16 @@
+import c.string
+
+// Returns the length of a string
+fn Len(s: string) {
+    return c.string.strlen(s)
+}
+
+// Concatenates two strings into dest (assumes dest is large enough)
+fn Concat(dest: string, src: string) {
+    return c.string.strcat(dest, src)
+}
+
+// Compares two strings for equality
+fn Equal(a: string, b: string) {
+    return c.string.strcmp(a, b) == 0
+} 

@@ -1,0 +1,13 @@
+import c.stdio
+
+fn Print(s: string) {
+    c.stdio.printf("%s", s)
+}
+
+fn Println(s: string) {
+    c.stdio.printf("%s\n", s)
+}
+
+fn Printf(fmt: string, ...args) {
+    c.stdio.printf(fmt, ...args)
+} 

@@ -14,8 +14,8 @@ create_library = true
 library_type = "both"
 
 [dependencies]
-math = "packages/stdlib"
-utils = "packages/utils"
+fmt = "packages/fmt"
+math = "packages/math"
 
 [dev-dependencies]
 linter = "packages/linter" 

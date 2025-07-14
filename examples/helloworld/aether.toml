@@ -16,8 +16,8 @@ library_type = "shared"
 [dependencies]
 # Add your dependencies here
 stdio = "../../packages/c/src/stdio.ae"
-# stdlib = "packages/stdlib"
-# utils = "packages/utils"
+# fmt = "packages/fmt"
+# math = "packages/math"
 
 [dev-dependencies]
 # Add development dependencies here

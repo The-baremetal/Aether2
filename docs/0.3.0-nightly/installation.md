@@ -207,22 +207,45 @@ aether --version
 
 ### Windows {#windows}
 
-#### Installer
+#### Recommended: Tarball Install
 
-```powershell
-aria2c -x16 -s16 -j1 (Invoke-RestMethod https://api.github.com/repos/The-baremetal/Aether2/releases/latest).assets.browser_download_url -match "aether-windows_amd64.exe"
-& .\aether-windows_amd64.exe --version
+The preferred way to install Aether on Windows is to use the tarball release. This preserves the correct AETHERROOT layout for the standard library and binary.
+
+**Steps:**
+
+1. **Download the latest tarball** for Windows from the [releases page](https://github.com/The-baremetal/Aether2/releases).
+2. **Extract the tarball** to a directory, e.g. `C:\Program Files\Aether` (you may need admin rights).
+3. **Set the AETHERROOT environment variable:**
+   - **Command Prompt:**
+
+     ```cmd
+     set AETHERROOT=C:\Program Files\Aether
+     ```
+
+   - **PowerShell:**
+
+     ```powershell
+     $env:AETHERROOT = "C:\Program Files\Aether"
+     ```
+
+4. (Optional) Add `C:\Program Files\Aether\bin` to your `PATH` for easy access to the `aether` command.
+
+After extraction, your directory should look like:
+
+```
+C:\Program Files\Aether\
+  bin\
+    aether.exe
+  packages\
+    fmt\
+    math\
+    string\
+    ...
 ```
 
-#### Manual
+This ensures the Aether compiler can always find the standard library in the correct place.
 
-1. Download `.exe` with aria2.
-2. Place in a directory on your `PATH` (e.g., `C:\Tools`).
-3. Run:
-
-   ```powershell
-   aether-windows_amd64.exe --version
-   ```
+For more details on the install layout and standard library, see [AETHERROOT Install Layout](#aetherroot-install-layout) and [stdlib.md](./stdlib.md).
 
 ---
 
@@ -266,3 +289,43 @@ Or use the built-in updater:
 ## Getting Help {#getting-help}
 
 For support, open an issue on [GitHub](https://github.com/The-baremetal/Aether2/issues) or join the community chat.
+
+---
+
+## AETHERROOT Install Layout
+
+After installation (via tarball, .deb, .rpm, .pkg, etc.), Aether will be installed in the following structure:
+
+```
+/usr/local/aether/
+  bin/
+    aether         # The Aether compiler binary
+  packages/
+    fmt/
+    math/
+    string/
+    ...            # (copied directly from the source /packages)
+```
+
+- On Windows, this will be under `C:\Program Files\Aether\`.
+- The installer also creates a symlink at `/usr/local/bin/aether` for convenience (on Unix-like systems).
+
+**AETHERROOT** should be set to `/usr/local/aether` (or the equivalent install path on your system).
+
+### How to Set AETHERROOT
+- **Unix/Linux/macOS:**
+  ```sh
+  export AETHERROOT=/usr/local/aether
+  ```
+- **Windows (cmd):**
+  ```cmd
+  set AETHERROOT=C:\Program Files\Aether
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  $env:AETHERROOT = "C:\Program Files\Aether"
+  ```
+
+For more details on the standard library and import resolution, see [stdlib.md](./stdlib.md).
+
+---

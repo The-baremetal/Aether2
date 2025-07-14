@@ -1,0 +1,5 @@
+[package]
+name = "string"
+version = "0.1.0"
+description = "String utilities for Aether."
+authors = ["Aether Contributors"] 

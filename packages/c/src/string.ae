@@ -1,0 +1,38 @@
+// C string.h bindings
+// #include <string.h>
+
+func strlen(s) {
+    return c_strlen(s)
+}
+
+func strcpy(dest, src) {
+    return c_strcpy(dest, src)
+}
+
+func strcat(dest, src) {
+    return c_strcat(dest, src)
+}
+
+func strcmp(s1, s2) {
+    return c_strcmp(s1, s2)
+}
+
+func strncpy(dest, src, n) {
+    return c_strncpy(dest, src, n)
+}
+
+func strncmp(s1, s2, n) {
+    return c_strncmp(s1, s2, n)
+}
+
+func strchr(s, c) {
+    return c_strchr(s, c)
+}
+
+func strstr(haystack, needle) {
+    return c_strstr(haystack, needle)
+}
+
+func memset(s, c, n) {
+    return c_memset(s, c, n)
+} 

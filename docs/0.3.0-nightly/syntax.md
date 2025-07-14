@@ -8,30 +8,30 @@ Aether is designed for **minimal typing**. Write your code directly at the top l
 
 ```aether
 // Just write your code directly!
-import stdio
-print("🍕 Hello from Aether!")
+import "fmt"
+fmt.Print("🍕 Hello from Aether!")
 x = 10
 y = 20
-print("Sum:", x + y)
+fmt.Print("Sum:", x + y)
 ```
 
 **Key principles:**
 - ✅ **Top-level statements** - write code directly, no `func main()` required
 - ✅ **Minimal boilerplate** - no unnecessary function wrappers
 - ✅ **Direct execution** - your code runs immediately
-- ✅ **Import what you need** - `import stdio` gives you `print()`, `printf()`, etc.
+- ✅ **Import what you need** - `import "fmt"` gives you `fmt.Print()`, `fmt.Printf()`, etc.
 
 **Wrong (don't do this):**
 ```aether
 func main() {
-  print("Hello!")
+  fmt.Print("Hello!")
 }
 main()
 ```
 
 **Right (do this):**
 ```aether
-print("Hello!")
+fmt.Print("Hello!")
 ```
 
 ---
@@ -42,26 +42,26 @@ Aether provides built-in functions through imports:
 
 ```aether
 // Import stdio for basic I/O
-import stdio
-print("Hello!")           // Basic print
-stdio.printf("Formatted") // Formatted print
+import "fmt"
+fmt.Print("Hello!")           // Basic print
+fmt.Printf("Formatted") // Formatted print
 
 // Import math for calculations
-import math
-result = math.add(5, 3)   // Addition
-sqrt = math.sqrt(16)      // Square root
+import "math"
+result = math.Add(5, 3)   // Addition
+sqrt = math.Sqrt(16)      // Square root
 
 // Import with alias
-import math as m
-result = m.add(5, 3)
+import "math" as m
+result = m.Add(5, 3)
 ```
 
 **Common stdlib functions:**
-- `print()` - Print to console
-- `printf()` - Formatted printing
-- `math.add()`, `math.sub()`, `math.mul()`, `math.div()` - Basic math
-- `math.sqrt()`, `math.pow()` - Advanced math
-- `string.len()`, `string.concat()` - String operations
+- `fmt.Print()` - Print to console
+- `fmt.Printf()` - Formatted printing
+- `math.Add()`, `math.Sub()`, `math.Mul()`, `math.Div()` - Basic math
+- `math.Sqrt()`, `math.Pow()` - Advanced math
+- `string.Len()`, `string.Concat()` - String operations
 
 **No imports needed for basic operations:**
 ```aether
@@ -85,17 +85,17 @@ arr = [1, 2, 3]   // Arrays work
 
 ## 2. Imports & Linking
 
-- `import math` brings all functions from math into the global namespace. You can use `plus()` or `sqrt()` directly.
-- `import math as math` brings all functions from math into the `math` namespace. You must use `math.plus()` or `math.sqrt()`.
+- `import "math"` brings all functions from math into the global namespace. You can use `plus()` or `sqrt()` directly.
+- `import "math" as math` brings all functions from math into the `math` namespace. You must use `math.plus()` or `math.sqrt()`.
 - Imports are not linked immediately. The compiler generates separate object files for each import, and the linker (`ld`) only links them when you actually use the functions.
 - No global pollution when using `as`.
 
 ```aether
-import math
+import "math"
 x = plus(2, 3)
 y = sqrt(16)
 
-import math as math
+import "math" as math
 z = math.plus(2, 3)
 w = math.sqrt(16)
 ```
@@ -109,19 +109,19 @@ w = math.sqrt(16)
 
 ```aether
 numbers = [1, 2, 3, 4, 5]
-print(numbers[2])
+fmt.Print(numbers[2])
 
 matrix = [
   [1, 2],
   [3, 4]
 ]
-print(matrix[1][0])
+fmt.Print(matrix[1][0])
 
 users = [
   { name: "bob", age: 20 },
   { name: "alice", age: 22 }
 ]
-print(users[0].name)
+fmt.Print(users[0].name)
 ```
 
 ---
@@ -144,7 +144,7 @@ result = str1 .. str2 // "foobar"
 // Varargs
 func printAll(...args) {
   repeat(args.length) {
-    print(args[_])
+    fmt.Print(args[_])
   }
 }
 
@@ -157,11 +157,11 @@ printAll(1, 2, 3, "pizza")
 
 ```aether
 func greet {
-  print("hello world")
+  fmt.Print("hello world")
 }
 
 func greet(name) {
-  print("hello", name)
+  fmt.Print("hello", name)
 }
 
 func add(a, b) {
@@ -184,11 +184,11 @@ y = 20
 
 ```aether
 if x > y {
-  print("x bigger")
+  fmt.Print("x bigger")
 } else if x == y {
-  print("they are equal!")
+  fmt.Print("they are equal!")
 } else {
-  print("y bigger")
+  fmt.Print("y bigger")
 }
 ```
 
@@ -204,19 +204,19 @@ Pattern matching uses the match/case syntax:
 ```aether
 match x {
   case 0 {
-    print("zero")
+    fmt.Print("zero")
   }
   case 1 {
-    print("one")
+    fmt.Print("one")
   }
   case [a, b] {
-    print("array with two elements")
+    fmt.Print("array with two elements")
   }
   case {name} {
-    print("struct with name field")
+    fmt.Print("struct with name field")
   }
   case _ {
-    print("something else")
+    fmt.Print("something else")
   }
 }
 ```
@@ -235,12 +235,12 @@ match x {
 ```aether
 // Loop over values
 for item in ["cheese", "pepperoni", "mushroom"] {
-  print("topping:", item)
+  fmt.Print("topping:", item)
 }
 
 // Loop with index and value
 for i, topping in ["cheese", "pepperoni", "mushroom"] {
-  print("slice", i, "has", topping)
+  fmt.Print("slice", i, "has", topping)
 }
 ```
 
@@ -252,7 +252,7 @@ for i, topping in ["cheese", "pepperoni", "mushroom"] {
 
 ```aether
 repeat(5) {
-  print("looping!")
+  fmt.Print("looping!")
 }
 ```
 
@@ -260,7 +260,7 @@ repeat(5) {
 
 ```aether
 while x < 10 {
-  print("count", x)
+  fmt.Print("count", x)
   x = x + 1
 }
 ```
@@ -275,7 +275,7 @@ for i in [1, 2, 3, 4, 5, 6, 7, 8] {
   if i % 2 == 0 {
     continue // Skip even numbers
   }
-  print(i)
+  fmt.Print(i)
 }
 ```
 
@@ -315,9 +315,9 @@ pizza()
 try {
   riskyStuff()
 } catch (err) {
-  print("oops!", err)
+  fmt.Print("oops!", err)
 } finally {
-  print("done!")
+  fmt.Print("done!")
 }
 ```
 
@@ -327,11 +327,11 @@ try {
 
 ```aether
 myLambda = {
-  print("I am a lambda!")
+  fmt.Print("I am a lambda!")
 }
 
 doSomething {
-  print("inline lambda!")
+  fmt.Print("inline lambda!")
 }
 ```
 
@@ -413,13 +413,13 @@ Aether supports the following operators:
 
 ```aether
 if x == 10 {
-  print("x is ten")
+  fmt.Print("x is ten")
 }
 if y != 5 {
-  print("y is not five")
+  fmt.Print("y is not five")
 }
 if a <= b {
-  print("a is less than or equal to b")
+  fmt.Print("a is less than or equal to b")
 }
 z = (x + y) * 2
 w = x ^ 3
@@ -435,7 +435,7 @@ Indentation is for humans. The compiler only cares about blocks and dots for cha
 
 ## 23. Standard Library
 
-Built-ins like `print` are always available. More to come!
+Built-ins like `fmt.Print` are always available. More to come!
 
 ---
 
@@ -464,13 +464,13 @@ Built-ins like `print` are always available. More to come!
 ```aether
 x = 10
 myLambda = {
-  print(x + 5)
+  fmt.Print(x + 5)
 }
 myLambda()
 
 nums = [1, 2, 3]
 nums.map({
-  print("pizza!")
+  fmt.Print("pizza!")
 })
 ```
 
@@ -479,8 +479,4 @@ nums.map({
 ## 27. No GOTO (Ever!)
 
 - GOTO is not allowed in Aether. No jumping around, no spaghetti code, no pineapple on pizza!
-- Use structured control flow: `if`, `else`, `while`, `repeat`, `break`, `continue`, `return`, `try/catch/finally`.
-- LLVM will squeeze all the performance out of your code, so you never need GOTO anyway. 🍋
-- Your code stays readable, maintainable, and delicious!
-
----
+- Use structured control flow: `if`, `

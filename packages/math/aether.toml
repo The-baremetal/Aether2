@@ -1,0 +1,4 @@
+name = "math"
+version = "0.1.0"
+description = "Standard library for Aether"
+dependencies = [] 
