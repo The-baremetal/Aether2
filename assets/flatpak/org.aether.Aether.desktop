@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Aether
+Comment={{DESCRIPTION}}
+Exec=aether
+Icon=org.aether.Aether
+Terminal=true
+Type=Application
+Categories=Development;Programming;
+Keywords=programming;language;development;compiler;
+StartupNotify=true
