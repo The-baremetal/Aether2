@@ -458,6 +458,12 @@ func doBuild(args []string) {
 	var allParseErrors []utils.ParseError
 	var moduleSymbols map[string]map[string]interface{} = make(map[string]map[string]interface{})
 
+	// Determine the entry file (first in filesToBuild)
+	entryFile := ""
+	if len(filesToBuild) > 0 {
+		entryFile = filesToBuild[0]
+	}
+
 	for _, file := range sortedFiles {
 		if buildFlags.verbose {
 			fmt.Printf("  Compiling %s\n", file)
@@ -475,12 +481,17 @@ func doBuild(args []string) {
 			for i, tok := range tokens {
 				fmt.Printf("%3d: %-12s '%s' (line %d, col %d)\n",
 					i, tok.Type, tok.Literal, tok.Line, tok.Column)
-			}
+				}
 			fmt.Println()
 		}
 
 		p := parser.NewParser(l)
 		p.SetFile(file)
+		if file == entryFile {
+			p.IsEntryFile = true
+		} else {
+			p.IsEntryFile = false
+		}
 		ast := p.Parse()
 
 		if len(p.Errors.Errors) > 0 {

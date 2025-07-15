@@ -21,6 +21,7 @@ type Parser struct {
 	sourceLines []string
 	currentFile string
 	isParsingMatch bool
+	IsEntryFile bool
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
@@ -122,7 +123,8 @@ func (p *Parser) Parse() *Program {
 		}
 	}
 
-	if len(topLevel) > 0 && !mainExists {
+	// Only synthesize main for the entry file
+	if len(topLevel) > 0 && !mainExists && p.IsEntryFile {
 		mainFn := &Function{
 			Name:   &Identifier{Value: "main"},
 			Params: []*Identifier{},
