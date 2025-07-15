@@ -479,4 +479,4 @@ nums.map({
 ## 27. No GOTO (Ever!)
 
 - GOTO is not allowed in Aether. No jumping around, no spaghetti code, no pineapple on pizza!
-- Use structured control flow: `if`, `
+- Use structured control flow: `if`,

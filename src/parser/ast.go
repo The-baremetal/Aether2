@@ -249,6 +249,10 @@ func (n *ASTNode) Kind() NodeKind {
 }
 
 func expressionToASTNode(e Expression) *ASTNode {
+	if e == nil {
+		// Nil expression, return nil to avoid panic
+		return nil
+	}
 	switch expr := e.(type) {
 	case *Identifier:
 		return &ASTNode{
@@ -272,10 +276,18 @@ func expressionToASTNode(e Expression) *ASTNode {
 			Inner:    mapArgsToASTNodes(expr.Args),
 		}
 	case *PropertyAccess:
+		var left *ASTNode
+		if expr.Object != nil {
+			left = expressionToASTNode(expr.Object)
+		}
+		var property *ASTNode
+		if expr.Property != nil {
+			property = expressionToASTNode(expr.Property)
+		}
 		return &ASTNode{
 			NodeKind: PropertyAccessKind,
-			Left:     expressionToASTNode(expr.Object),
-			Inner:    []*ASTNode{expressionToASTNode(expr.Property)},
+			Left:     left,
+			Inner:    []*ASTNode{property},
 		}
 	case *ArrayIndex:
 		return &ASTNode{
@@ -286,16 +298,24 @@ func expressionToASTNode(e Expression) *ASTNode {
 	case *StructInstantiation:
 		fields := make([]*ASTNode, 0, len(expr.Fields))
 		for name, value := range expr.Fields {
+			var right *ASTNode
+			if value != nil {
+				right = expressionToASTNode(value)
+			}
 			fieldNode := &ASTNode{
 				NodeKind: "Field",
 				Name:     name,
-				Right:    expressionToASTNode(value),
+				Right:    right,
 			}
 			fields = append(fields, fieldNode)
 		}
+		var typeName string
+		if expr.TypeName != nil {
+			typeName = expr.TypeName.Value
+		}
 		return &ASTNode{
 			NodeKind: StructInstantiationKind,
-			Name:     expr.TypeName.Value,
+			Name:     typeName,
 			Inner:    fields,
 		}
 	case *PartialApplication:
@@ -316,7 +336,11 @@ func expressionToASTNode(e Expression) *ASTNode {
 func mapArgsToASTNodes(args []Expression) []*ASTNode {
 	result := make([]*ASTNode, 0, len(args))
 	for _, a := range args {
-		result = append(result, expressionToASTNode(a))
+		if a == nil {
+			result = append(result, nil)
+		} else {
+			result = append(result, expressionToASTNode(a))
+		}
 	}
 	return result
 }
@@ -374,9 +398,16 @@ func caseToASTNode(c *Case) *ASTNode {
 }
 
 func blockToASTNode(b *Block) *ASTNode {
+	if b == nil {
+		return nil
+	}
 	statements := make([]*ASTNode, len(b.Statements))
 	for i, stmt := range b.Statements {
-		statements[i] = statementToASTNode(stmt)
+		if stmt == nil {
+			statements[i] = nil
+		} else {
+			statements[i] = statementToASTNode(stmt)
+		}
 	}
 	return &ASTNode{
 		NodeKind: BlockKind,
@@ -385,13 +416,21 @@ func blockToASTNode(b *Block) *ASTNode {
 }
 
 func statementToASTNode(s Statement) *ASTNode {
+	if s == nil {
+		// Nil statement, return nil to avoid panic
+		return nil
+	}
 	switch stmt := s.(type) {
 	case *Match:
 		return matchToASTNode(stmt)
 	case *Assignment:
 		var names []*ASTNode
 		for _, n := range stmt.Names {
-			names = append(names, expressionToASTNode(n))
+			if n == nil {
+				names = append(names, nil)
+			} else {
+				names = append(names, expressionToASTNode(n))
+			}
 		}
 		return &ASTNode{
 			NodeKind: AssignmentKind,
@@ -401,29 +440,45 @@ func statementToASTNode(s Statement) *ASTNode {
 	case *Function:
 		params := make([]*ASTNode, len(stmt.Params))
 		for i, param := range stmt.Params {
-			params[i] = &ASTNode{
-				NodeKind: ParamKind,
-				Value:    param.Value,
+			if param == nil {
+				params[i] = nil
+			} else {
+				params[i] = &ASTNode{
+					NodeKind: ParamKind,
+					Value:    param.Value,
+				}
 			}
+		}
+		var name string
+		if stmt.Name != nil {
+			name = stmt.Name.Value
 		}
 		return &ASTNode{
 			NodeKind: FunctionDeclKind,
-			Name:     stmt.Name.Value,
+			Name:     name,
 			Params:   params,
 			Body:     blockToASTNode(stmt.Body),
 		}
 	case *StructDef:
 		fields := make([]*ASTNode, len(stmt.Fields))
 		for i, field := range stmt.Fields {
-			fields[i] = &ASTNode{
-				NodeKind: ParamKind,
-				Name:     field.Name.Value,
-				Value:    field.Type,
+			if field == nil {
+				fields[i] = nil
+			} else {
+				fields[i] = &ASTNode{
+					NodeKind: ParamKind,
+					Name:     field.Name.Value,
+					Value:    field.Type,
+				}
 			}
+		}
+		var name string
+		if stmt.Name != nil {
+			name = stmt.Name.Value
 		}
 		return &ASTNode{
 			NodeKind: StructDefKind,
-			Name:     stmt.Name.Value,
+			Name:     name,
 			Params:   fields,
 		}
 	case *If:
@@ -446,13 +501,19 @@ func statementToASTNode(s Statement) *ASTNode {
 			Body:     blockToASTNode(stmt.Body),
 		}
 	case *For:
-		index := &ASTNode{
-			NodeKind: ParamKind,
-			Value:    stmt.Index.Value,
+		var index *ASTNode
+		if stmt.Index != nil {
+			index = &ASTNode{
+				NodeKind: ParamKind,
+				Value:    stmt.Index.Value,
+			}
 		}
-		value := &ASTNode{
-			NodeKind: ParamKind,
-			Value:    stmt.Value.Value,
+		var value *ASTNode
+		if stmt.Value != nil {
+			value = &ASTNode{
+				NodeKind: ParamKind,
+				Value:    stmt.Value.Value,
+			}
 		}
 		return &ASTNode{
 			NodeKind: ForKind,
@@ -466,15 +527,26 @@ func statementToASTNode(s Statement) *ASTNode {
 			Left:     expressionToASTNode(stmt.Value),
 		}
 	case *Import:
+		var left, right *ASTNode
+		if stmt.Name != nil {
+			left = expressionToASTNode(stmt.Name)
+		}
+		if stmt.As != nil {
+			right = expressionToASTNode(stmt.As)
+		}
 		return &ASTNode{
 			NodeKind: ImportKind,
-			Left:     expressionToASTNode(stmt.Name),
-			Right:    expressionToASTNode(stmt.As),
+			Left:     left,
+			Right:    right,
 		}
 	case *Package:
+		var value string
+		if stmt.Name != nil {
+			value = stmt.Name.Value
+		}
 		return &ASTNode{
 			NodeKind: PackageKind,
-			Value:    stmt.Name.Value,
+			Value:    value,
 		}
 	case *CComment:
 		return &ASTNode{
@@ -490,6 +562,9 @@ func statementToASTNode(s Statement) *ASTNode {
 			NodeKind: ContinueKind,
 		}
 	case *ExpressionStatement:
+		if stmt.Expr == nil {
+			return nil
+		}
 		return expressionToASTNode(stmt.Expr)
 	}
 	return nil
