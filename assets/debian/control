@@ -1,0 +1,9 @@
+Package: aether
+Version: {{VERSION}}
+Section: base
+Priority: optional
+Architecture: {{ARCH}}
+Maintainer: {{MAINTAINER}}
+Description: {{DESCRIPTION}}
+Homepage: {{HOMEPAGE}}
+Depends: libc6 (>= 2.17)
