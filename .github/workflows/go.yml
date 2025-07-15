@@ -106,15 +106,17 @@ jobs:
         with:
           go-version: '1.24.1'
 
-      - name: Install Linux deps (fpm, dpkg, appimage)
+      - name: Install Linux deps (fpm, dpkg, appimage, flatpak)
         if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev libfuse2
+          sudo apt-get install -y ruby ruby-dev build-essential dpkg-dev libfuse2 flatpak-builder
           sudo gem install --no-document fpm
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
           sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+          # Add Flathub repository for Flatpak dependencies
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Setup Android NDK (only for android)
         if: matrix.os == 'android'
@@ -198,6 +200,75 @@ jobs:
           cp -r packages/* dist/rpm_staging/usr/local/aether/packages/
           ln -sf /usr/local/aether/bin/aether dist/rpm_staging/usr/local/bin/aether
           fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} -C dist/rpm_staging -p dist/aether-${GOOS}_${GOARCH}.rpm .
+
+          # Flatpak package (only for x86_64 and aarch64)
+          if [ "$GOARCH" = "amd64" ] || [ "$GOARCH" = "arm64" ]; then
+            # Create Flatpak manifest
+            mkdir -p flatpak
+            cat > flatpak/org.aether.Aether.yaml <<EOF
+          app-id: org.aether.Aether
+          runtime: org.freedesktop.Platform
+          runtime-version: '23.08'
+          sdk: org.freedesktop.Sdk
+          command: aether
+          
+          finish-args:
+            - --share=ipc
+            - --socket=x11
+            - --socket=wayland
+            - --filesystem=home
+            - --filesystem=xdg-documents
+            - --filesystem=xdg-desktop
+            - --filesystem=xdg-download
+            - --share=network
+          
+          modules:
+            - name: aether
+              buildsystem: simple
+              build-commands:
+                - install -D aether /app/bin/aether
+                - mkdir -p /app/share/aether
+                - cp -r packages/* /app/share/aether/
+                - install -D org.aether.Aether.desktop /app/share/applications/org.aether.Aether.desktop
+                - install -D icon-256x256.png /app/share/icons/hicolor/256x256/apps/org.aether.Aether.png
+              sources:
+                - type: file
+                  path: ../dist/aether-${GOOS}_${GOARCH}
+                  dest-filename: aether
+                - type: dir
+                  path: ../packages
+                  dest: packages
+                - type: file
+                  path: ../assets/icon-256x256.png
+                - type: file
+                  path: org.aether.Aether.desktop
+          EOF
+
+            # Create desktop file for Flatpak
+            cat > flatpak/org.aether.Aether.desktop <<EOF
+          [Desktop Entry]
+          Name=Aether
+          Comment=Aether Programming Language
+          Exec=aether
+          Icon=org.aether.Aether
+          Terminal=true
+          Type=Application
+          Categories=Development;Programming;
+          EOF
+
+            # Set Flatpak architecture
+            FLATPAK_ARCH="$GOARCH"
+            if [ "$GOARCH" = "amd64" ]; then FLATPAK_ARCH="x86_64"; fi
+            if [ "$GOARCH" = "arm64" ]; then FLATPAK_ARCH="aarch64"; fi
+
+            # Build Flatpak
+            cd flatpak
+            flatpak-builder --arch="$FLATPAK_ARCH" --repo=../dist/flatpak-repo --force-clean build org.aether.Aether.yaml
+            flatpak build-bundle ../dist/flatpak-repo ../dist/aether-${GOOS}_${GOARCH}.flatpak org.aether.Aether
+            cd ..
+          else
+            echo "Skipping Flatpak build for $GOARCH - not supported on Flathub"
+          fi
 
           # AppImage (if supported)
           if [ "$GOARCH" != "riscv64" ] && [ "$GOARCH" != "ppc64le" ]; then
