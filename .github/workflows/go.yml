@@ -106,6 +106,41 @@ jobs:
         with:
           go-version: '1.24.1'
 
+      - name: Read package metadata
+        id: pkg_meta
+        run: |
+          # Read version from assets/version.txt or default to 1.0.0
+          if [ -f assets/version.txt ]; then
+            VERSION=$(cat assets/version.txt | tr -d '\n')
+          else
+            VERSION="1.0.0"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Read description from assets/description.txt or use default
+          if [ -f assets/description.txt ]; then
+            DESCRIPTION=$(cat assets/description.txt | tr -d '\n')
+          else
+            DESCRIPTION="Aether Programming Language Binary"
+          fi
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+          
+          # Read maintainer from assets/maintainer.txt or use default
+          if [ -f assets/maintainer.txt ]; then
+            MAINTAINER=$(cat assets/maintainer.txt | tr -d '\n')
+          else
+            MAINTAINER="Aether Dev <noreply@aether.org>"
+          fi
+          echo "maintainer=$MAINTAINER" >> $GITHUB_OUTPUT
+          
+          # Read homepage from assets/homepage.txt or use default
+          if [ -f assets/homepage.txt ]; then
+            HOMEPAGE=$(cat assets/homepage.txt | tr -d '\n')
+          else
+            HOMEPAGE="https://aether.org"
+          fi
+          echo "homepage=$HOMEPAGE" >> $GITHUB_OUTPUT
+
       - name: Install Linux deps (fpm, dpkg, appimage, flatpak)
         if: matrix.os == 'linux' && matrix.runner == 'ubuntu-latest'
         run: |
@@ -175,17 +210,38 @@ jobs:
           mkdir -p dist/pkgroot/usr/local/bin
           ln -sf /usr/local/aether/bin/aether dist/pkgroot/usr/local/bin/aether
 
-          # DEB package
+          # DEB package - use control file from assets if available
           mkdir -p dist/deb/DEBIAN
-          cat > dist/deb/DEBIAN/control <<EOF
+          if [ -f assets/debian/control ]; then
+            # Use template from assets and substitute variables
+            sed -e "s/{{VERSION}}/${{ steps.pkg_meta.outputs.version }}/g" \
+                -e "s/{{ARCH}}/${GOARCH}/g" \
+                -e "s/{{MAINTAINER}}/${{ steps.pkg_meta.outputs.maintainer }}/g" \
+                -e "s/{{DESCRIPTION}}/${{ steps.pkg_meta.outputs.description }}/g" \
+                -e "s/{{HOMEPAGE}}/${{ steps.pkg_meta.outputs.homepage }}/g" \
+                assets/debian/control > dist/deb/DEBIAN/control
+          else
+            # Fallback to inline control file
+            cat > dist/deb/DEBIAN/control <<EOF
           Package: aether
-          Version: 1.0.0
+          Version: ${{ steps.pkg_meta.outputs.version }}
           Section: base
           Priority: optional
           Architecture: ${GOARCH}
-          Maintainer: Aether Dev <noreply@aether.org>
-          Description: Aether Programming Language Binary
+          Maintainer: ${{ steps.pkg_meta.outputs.maintainer }}
+          Description: ${{ steps.pkg_meta.outputs.description }}
+          Homepage: ${{ steps.pkg_meta.outputs.homepage }}
           EOF
+          fi
+          
+          # Copy postinst, prerm, etc. scripts if they exist
+          for script in postinst prerm postrm preinst; do
+            if [ -f assets/debian/$script ]; then
+              cp assets/debian/$script dist/deb/DEBIAN/
+              chmod +x dist/deb/DEBIAN/$script
+            fi
+          done
+          
           mkdir -p dist/deb/usr/local/aether/bin
           mkdir -p dist/deb/usr/local/aether/packages
           mkdir -p dist/deb/usr/local/bin
@@ -194,30 +250,64 @@ jobs:
           ln -sf /usr/local/aether/bin/aether dist/deb/usr/local/bin/aether
           dpkg-deb --build dist/deb dist/aether-${GOOS}_${GOARCH}.deb
 
-          # RPM package
+          # RPM package - use spec file from assets if available
           mkdir -p dist/rpm_staging/usr/local/aether/bin
           mkdir -p dist/rpm_staging/usr/local/aether/packages
           mkdir -p dist/rpm_staging/usr/local/bin
           cp dist/aether-${GOOS}_${GOARCH} dist/rpm_staging/usr/local/aether/bin/aether
           cp -r packages/* dist/rpm_staging/usr/local/aether/packages/
           ln -sf /usr/local/aether/bin/aether dist/rpm_staging/usr/local/bin/aether
-          fpm -s dir -t rpm -n aether -v 1.0.0 --architecture ${GOARCH} -C dist/rpm_staging -p dist/aether-${GOOS}_${GOARCH}.rpm .
+          
+          # Build RPM with fpm, using metadata from assets
+          FPM_ARGS="-s dir -t rpm -n aether -v ${{ steps.pkg_meta.outputs.version }} --architecture ${GOARCH} -C dist/rpm_staging"
+          FPM_ARGS="$FPM_ARGS --maintainer '${{ steps.pkg_meta.outputs.maintainer }}'"
+          FPM_ARGS="$FPM_ARGS --description '${{ steps.pkg_meta.outputs.description }}'"
+          FPM_ARGS="$FPM_ARGS --url '${{ steps.pkg_meta.outputs.homepage }}'"
+          FPM_ARGS="$FPM_ARGS -p dist/aether-${GOOS}_${GOARCH}.rpm"
+          
+          # Add RPM-specific scripts if they exist
+          if [ -f assets/rpm/post-install.sh ]; then
+            FPM_ARGS="$FPM_ARGS --after-install assets/rpm/post-install.sh"
+          fi
+          if [ -f assets/rpm/pre-remove.sh ]; then
+            FPM_ARGS="$FPM_ARGS --before-remove assets/rpm/pre-remove.sh"
+          fi
+          if [ -f assets/rpm/post-remove.sh ]; then
+            FPM_ARGS="$FPM_ARGS --after-remove assets/rpm/post-remove.sh"
+          fi
+          
+          eval "fpm $FPM_ARGS ."
 
           # Flatpak package (only for x86_64 and aarch64)
           if [ "$GOARCH" = "amd64" ] || [ "$GOARCH" = "arm64" ]; then
-            # Create required assets directory if it doesn't exist
-            mkdir -p assets
-            
-            # Create a simple icon if it doesn't exist
-            if [ ! -f assets/icon-256x256.png ]; then
-              # Create a simple placeholder icon using convert (ImageMagick)
-              sudo apt-get install -y imagemagick
-              convert -size 256x256 xc:blue -fill white -pointsize 48 -gravity center -annotate +0+0 "A" assets/icon-256x256.png
-            fi
-            
-            # Create Flatpak manifest
-            mkdir -p flatpak
-            cat > flatpak/org.aether.Aether.yaml <<EOF
+            # Use Flatpak manifest from assets if available
+            if [ -f assets/flatpak/org.aether.Aether.yaml ]; then
+              mkdir -p flatpak
+              # Copy manifest and substitute variables
+              sed -e "s/{{VERSION}}/${{ steps.pkg_meta.outputs.version }}/g" \
+                  -e "s/{{DESCRIPTION}}/${{ steps.pkg_meta.outputs.description }}/g" \
+                  assets/flatpak/org.aether.Aether.yaml > flatpak/org.aether.Aether.yaml
+              
+              # Copy desktop file if it exists in assets
+              if [ -f assets/flatpak/org.aether.Aether.desktop ]; then
+                cp assets/flatpak/org.aether.Aether.desktop flatpak/
+              else
+                # Create default desktop file
+                cat > flatpak/org.aether.Aether.desktop <<EOF
+          [Desktop Entry]
+          Name=Aether
+          Comment=${{ steps.pkg_meta.outputs.description }}
+          Exec=aether
+          Icon=org.aether.Aether
+          Terminal=true
+          Type=Application
+          Categories=Development;Programming;
+          EOF
+              fi
+            else
+              # Fallback to inline manifest
+              mkdir -p flatpak
+              cat > flatpak/org.aether.Aether.yaml <<EOF
           app-id: org.aether.Aether
           runtime: org.freedesktop.Platform
           runtime-version: '23.08'
@@ -256,17 +346,24 @@ jobs:
                   path: org.aether.Aether.desktop
           EOF
 
-            # Create desktop file for Flatpak
-            cat > flatpak/org.aether.Aether.desktop <<EOF
+              cat > flatpak/org.aether.Aether.desktop <<EOF
           [Desktop Entry]
           Name=Aether
-          Comment=Aether Programming Language
+          Comment=${{ steps.pkg_meta.outputs.description }}
           Exec=aether
           Icon=org.aether.Aether
           Terminal=true
           Type=Application
           Categories=Development;Programming;
           EOF
+            fi
+
+            # Ensure icon exists
+            if [ ! -f assets/icon-256x256.png ]; then
+              mkdir -p assets
+              sudo apt-get install -y imagemagick
+              convert -size 256x256 xc:blue -fill white -pointsize 48 -gravity center -annotate +0+0 "A" assets/icon-256x256.png
+            fi
 
             # Set Flatpak architecture
             FLATPAK_ARCH="$GOARCH"
@@ -291,7 +388,7 @@ jobs:
             mkdir -p AppDir/usr/bin
             cp dist/aether-${GOOS}_${GOARCH} AppDir/usr/bin/aether
             
-            # Use the same icon as Flatpak or create a simple one
+            # Use icon from assets
             if [ -f assets/icon-256x256.png ]; then
               cp assets/icon-256x256.png AppDir/icon-256x256.png
             else
@@ -300,14 +397,20 @@ jobs:
               convert -size 256x256 xc:blue -fill white -pointsize 48 -gravity center -annotate +0+0 "A" AppDir/icon-256x256.png
             fi
             
-            cat > AppDir/aether.desktop <<EOF
+            # Use desktop file from assets or create default
+            if [ -f assets/appimage/aether.desktop ]; then
+              cp assets/appimage/aether.desktop AppDir/
+            else
+              cat > AppDir/aether.desktop <<EOF
           [Desktop Entry]
           Name=Aether
+          Comment=${{ steps.pkg_meta.outputs.description }}
           Exec=aether
           Icon=icon-256x256
           Type=Application
-          Categories=Development;
+          Categories=Development;Programming;
           EOF
+            fi
 
             ARCH="$GOARCH"
             if [ "$GOARCH" = "amd64" ]; then ARCH="x86_64"; fi
@@ -350,12 +453,14 @@ jobs:
           ln -sf /usr/local/aether/bin/aether dist/macos_pkgroot/usr/local/bin/aether
 
           # PKG installer
-          pkgbuild \
-            --identifier org.aether.pkg \
-            --version 1.0.0 \
-            --install-location / \
-            --root dist/macos_pkgroot \
-            dist/aether-${GOOS}_${GOARCH}.pkg
+          PKG_ARGS="--identifier org.aether.pkg --version ${{ steps.pkg_meta.outputs.version }} --install-location / --root dist/macos_pkgroot"
+          
+          # Add scripts if they exist
+          if [ -f assets/macos/scripts ]; then
+            PKG_ARGS="$PKG_ARGS --scripts assets/macos/scripts"
+          fi
+          
+          eval "pkgbuild $PKG_ARGS dist/aether-${GOOS}_${GOARCH}.pkg"
 
           # DMG with full structure
           mkdir -p dmg/usr/local/aether/bin
@@ -364,6 +469,12 @@ jobs:
           cp "$BIN" dmg/usr/local/aether/bin/aether
           cp -r packages/* dmg/usr/local/aether/packages/
           ln -sf /usr/local/aether/bin/aether dmg/usr/local/bin/aether
+          
+          # Add README or other assets to DMG if they exist
+          if [ -f assets/macos/README.txt ]; then
+            cp assets/macos/README.txt dmg/
+          fi
+          
           hdiutil create -volname Aether \
             -srcfolder dmg \
             -ov \
@@ -388,12 +499,21 @@ jobs:
           cp dist/aether-${GOOS}_${GOARCH}.exe "tarball/Program Files/Aether/bin/aether.exe"
           cp -r packages/* "tarball/Program Files/Aether/packages/"
           
-          # Create a batch file for easier access
-          cat > "tarball/Program Files/Aether/aether.bat" <<EOF
+          # Create a batch file for easier access - use from assets if available
+          if [ -f assets/windows/aether.bat ]; then
+            cp assets/windows/aether.bat "tarball/Program Files/Aether/"
+          else
+            cat > "tarball/Program Files/Aether/aether.bat" <<EOF
           @echo off
           set AETHERROOT=%~dp0
           "%AETHERROOT%bin\aether.exe" %*
           EOF
+          fi
+          
+          # Add other Windows assets if they exist
+          if [ -f assets/windows/README.txt ]; then
+            cp assets/windows/README.txt "tarball/Program Files/Aether/"
+          fi
           
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
@@ -410,6 +530,12 @@ jobs:
           cp dist/aether-${GOOS}_${GOARCH}${EXT} tarball/usr/local/aether/bin/aether
           cp -r packages/* tarball/usr/local/aether/packages/
           ln -sf /usr/local/aether/bin/aether tarball/usr/local/bin/aether
+          
+          # Add OS-specific README if it exists
+          if [ -f assets/${GOOS}/README.txt ]; then
+            cp assets/${GOOS}/README.txt tarball/
+          fi
+          
           tar -cvf dist/aether-${GOOS}_${GOARCH}.tar -C tarball .
 
       - name: Upload artifacts
