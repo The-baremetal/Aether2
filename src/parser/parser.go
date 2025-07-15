@@ -99,7 +99,39 @@ func (p *Parser) expect(t lexer.TokenType) bool {
 
 func (p *Parser) Parse() *Program {
 	program := &Program{}
-	program.Statements = p.parseStatementList(lexer.EOF)
+	stmts := p.parseStatementList(lexer.EOF)
+
+	// Separate top-level statements
+	var topLevel []Statement
+	var others []Statement
+	mainExists := false
+	for _, s := range stmts {
+		if fn, ok := s.(*Function); ok && fn.Name != nil && fn.Name.Value == "main" {
+			mainExists = true
+		}
+		if _, ok := s.(*Function); ok {
+			others = append(others, s)
+		} else if _, ok := s.(*StructDef); ok {
+			others = append(others, s)
+		} else if _, ok := s.(*Import); ok {
+			others = append(others, s)
+		} else if _, ok := s.(*Package); ok {
+			others = append(others, s)
+		} else {
+			topLevel = append(topLevel, s)
+		}
+	}
+
+	if len(topLevel) > 0 && !mainExists {
+		mainFn := &Function{
+			Name:   &Identifier{Value: "main"},
+			Params: []*Identifier{},
+			Body:   &Block{Statements: topLevel},
+		}
+		others = append(others, mainFn)
+	}
+
+	program.Statements = others
 	return program
 }
 

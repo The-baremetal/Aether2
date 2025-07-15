@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"aether/lib/utils"
 )
 
 func AnalyzeImports(files []string) (map[string][]string, error) {
@@ -58,7 +59,7 @@ func AnalyzeImportStatement(importStmt *parser.Import, filePath string, result *
 	if !IsValidImportPath(importPath) {
 		importInfo.Valid = false
 		importInfo.Errors = append(importInfo.Errors, "Invalid import path format")
-		result.Errors = append(result.Errors, fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath))
+		result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath)})
 	}
 
 	// 1. Check AETHERROOT stdlib first
@@ -77,7 +78,7 @@ func AnalyzeImportStatement(importStmt *parser.Import, filePath string, result *
 			importInfo.Resolved = resolvedPath
 		} else {
 			importInfo.Errors = append(importInfo.Errors, "Imported file does not exist")
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: Imported file '%s' does not exist", filePath, importPath))
+			result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: Imported file '%s' does not exist", filePath, importPath)})
 		}
 	}
 

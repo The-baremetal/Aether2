@@ -139,22 +139,3 @@ func FormatErrorWithContext(err ParseError) string {
 
 	return b.String()
 }
-
-func getErrorType(kind ErrorKind) string {
-	switch kind {
-	case UnexpectedToken:
-		return "SyntaxError"
-	case UnexpectedEOF:
-		return "SyntaxError"
-	case InvalidSyntax:
-		return "SyntaxError"
-	case UnterminatedString:
-		return "SyntaxError"
-	case InvalidNumber:
-		return "SyntaxError"
-	case UnexpectedSemicolon:
-		return "SyntaxError"
-	default:
-		return "Error"
-	}
-}

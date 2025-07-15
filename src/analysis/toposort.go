@@ -3,6 +3,8 @@ package analysis
 import (
 	"fmt"
 	"strings"
+
+	"aether/lib/utils"
 )
 
 func TopoSort(files []string, imports map[string][]string) ([]string, error) {
@@ -105,7 +107,7 @@ func DetectCyclesInResult(result *AnalysisResult) {
 			if detectCycle(path, result.Dependencies, visited, recStack, []string{}) {
 				result.Cycles = append(result.Cycles, []string{})
 				result.Valid = false
-				result.Errors = append(result.Errors, "Circular import detected")
+				result.Errors = append(result.Errors, utils.ParseError{Message: "Circular import detected"})
 			}
 		}
 	}

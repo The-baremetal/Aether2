@@ -17,7 +17,7 @@ import (
 func AnalyzeProject(projectPath string) *AnalysisResult {
 	result := &AnalysisResult{
 		Valid:        true,
-		Errors:       []string{},
+		Errors:       []utils.ParseError{},
 		Warnings:     []string{},
 		Imports:      make(map[string]ImportInfo),
 		Functions:    make(map[string]FunctionInfo),
@@ -34,7 +34,7 @@ func AnalyzeProject(projectPath string) *AnalysisResult {
 	files, err := findAetherFiles(projectPath)
 	if err != nil {
 		result.Valid = false
-		result.Errors = append(result.Errors, fmt.Sprintf("Failed to find Aether files: %v", err))
+		result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("Failed to find Aether files: %v", err)})
 		return result
 	}
 
@@ -54,7 +54,7 @@ func AnalyzeProject(projectPath string) *AnalysisResult {
 func AnalyzeAST(ast *parser.ASTNode) *AnalysisResult {
 	result := &AnalysisResult{
 		Valid:        true,
-		Errors:       []string{},
+		Errors:       []utils.ParseError{},
 		Warnings:     []string{},
 		Imports:      make(map[string]ImportInfo),
 		Functions:    make(map[string]FunctionInfo),
@@ -367,7 +367,7 @@ func GenerateLockFile(projectPath string) error {
 func analyzeFile(filePath string, result *AnalysisResult) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("Failed to read file %s: %v", filePath, err))
+		result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("Failed to read file %s: %v", filePath, err)})
 		return
 	}
 
@@ -378,7 +378,7 @@ func analyzeFile(filePath string, result *AnalysisResult) {
 
 	if len(parser.Errors.Errors) > 0 {
 		for _, err := range parser.Errors.Errors {
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: %s", filePath, utils.FormatErrorWithContext(err)))
+			result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: %s", filePath, utils.FormatErrorWithContext(err))})
 		}
 		return
 	}
@@ -431,7 +431,7 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 	if !isValidImportPath(importPath) {
 		importInfo.Valid = false
 		importInfo.Errors = append(importInfo.Errors, "Invalid import path format")
-		result.Errors = append(result.Errors, fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath))
+		result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: Invalid import path '%s'", filePath, importPath)})
 	}
 
 	// First try to resolve using dependency configuration
@@ -463,7 +463,7 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 			importInfo.Resolved = resolvedPath
 		} else {
 			importInfo.Errors = append(importInfo.Errors, "Imported file does not exist")
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: Imported file '%s' does not exist", filePath, importPath))
+			result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: Imported file '%s' does not exist", filePath, importPath)})
 		}
 	}
 
@@ -527,7 +527,14 @@ func analyzeFunctionCall(call *parser.Call, filePath string, result *AnalysisRes
 			funcInfo.Used = true
 			result.Functions[funcName] = funcInfo
 		} else if !isStdlibFunction(funcName) {
+			// Enhanced error: function not found in any imported binding/module
 			result.Undefined = append(result.Undefined, fmt.Sprintf("function '%s'", funcName))
+			result.Errors = append(result.Errors, utils.ParseError{
+				Kind:    utils.UndefinedReference,
+				Message: "undefined reference to function '" + funcName + "' in imported binding or file. (Aether imports are not modules unless HMR is enabled.) Check spelling or update your binding.",
+				File:    filePath,
+				Fix:     "Check the spelling or update your binding.",
+			})
 		}
 	}
 
@@ -694,7 +701,7 @@ func detectCycles(result *AnalysisResult) {
 			if hasCycle(path, result.Dependencies, visited, recStack, []string{}) {
 				result.Cycles = append(result.Cycles, []string{})
 				result.Valid = false
-				result.Errors = append(result.Errors, "Circular import detected")
+				result.Errors = append(result.Errors, utils.ParseError{Message: "Circular import detected"})
 			}
 		}
 	}
@@ -764,7 +771,7 @@ func checkUndefinedReferences(result *AnalysisResult) {
 	if len(result.Undefined) > 0 {
 		result.Valid = false
 		for _, item := range result.Undefined {
-			result.Errors = append(result.Errors, fmt.Sprintf("Undefined reference: %s", item))
+			result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("Undefined reference: %s", item)})
 		}
 	}
 }
@@ -888,7 +895,9 @@ func validateExpressionFunctionCalls(expr interface{}, moduleFunctions map[strin
 				if !found {
 					result.Valid = false
 					result.Errors = append(result.Errors, utils.ParseError{
-						Message: fmt.Sprintf("Undefined function: %s", ident.Value),
+						Kind:    utils.UndefinedReference,
+						Message: "undefined reference to function '" + ident.Value + "' in imported binding or file. (Aether imports are not modules unless HMR is enabled.) Check spelling or update your binding.",
+						Fix:     "Check the spelling or update your binding.",
 					})
 				}
 			}
@@ -900,13 +909,17 @@ func validateExpressionFunctionCalls(expr interface{}, moduleFunctions map[strin
 				if !functions[e.Property.Value] {
 					result.Valid = false
 					result.Errors = append(result.Errors, utils.ParseError{
-						Message: fmt.Sprintf("Undefined property: %s.%s", moduleIdent.Value, e.Property.Value),
+						Kind:    utils.UndefinedReference,
+						Message: "undefined reference to function '" + e.Property.Value + "' in binding or file '" + moduleIdent.Value + "'. (Aether imports are not modules unless HMR is enabled.) Check spelling or update your binding.",
+						Fix:     "Check the spelling or update your binding.",
 					})
 				}
 			} else {
 				result.Valid = false
 				result.Errors = append(result.Errors, utils.ParseError{
-					Message: fmt.Sprintf("Undefined module: %s", moduleIdent.Value),
+					Kind:    utils.UndefinedReference,
+					Message: "undefined reference to module '" + moduleIdent.Value + "'. (Aether imports are not modules unless HMR is enabled.) Check import or binding.",
+					Fix:     "Check the import or binding for the module.",
 				})
 			}
 		}

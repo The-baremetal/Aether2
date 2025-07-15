@@ -12,6 +12,7 @@ const (
 	UnterminatedString
 	InvalidNumber
 	UnexpectedSemicolon // New error kind for semicolons
+	UndefinedReference // New error kind for undefined references
 )
 
 type ParseError struct {
@@ -49,6 +50,27 @@ func (l *ParseErrorList) ToMessages() []string {
 
 func ErrorMessage(err ParseError) string {
 	return FormatErrorWithContext(err)
+}
+
+func getErrorType(kind ErrorKind) string {
+	switch kind {
+	case UnexpectedToken:
+		return "SyntaxError"
+	case UnexpectedEOF:
+		return "SyntaxError"
+	case InvalidSyntax:
+		return "SyntaxError"
+	case UnterminatedString:
+		return "SyntaxError"
+	case InvalidNumber:
+		return "SyntaxError"
+	case UnexpectedSemicolon:
+		return "SyntaxError"
+	case UndefinedReference:
+		return "UndefinedReference"
+	default:
+		return "Error"
+	}
 }
 
 func UserFriendlyTokenName(tokenType string, literal string) string {

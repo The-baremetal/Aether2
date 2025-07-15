@@ -4,7 +4,7 @@ import "aether/lib/utils"
 
 type AnalysisResult struct {
 	Valid        bool
-	Errors       []string
+	Errors       []utils.ParseError
 	Warnings     []string
 	Imports      map[string]ImportInfo
 	Functions    map[string]FunctionInfo

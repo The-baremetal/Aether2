@@ -22,11 +22,23 @@ func (p *Parser) parseBlock() *Block {
 			fmt.Printf("🍕 parseBlock: added statement: %T\n", stmt)
 		} else {
 			fmt.Printf("🍕 parseBlock: got nil statement\n")
+			// Try to provide more context for the error
+			snippet := ""
+			if p.curToken.Line-1 < len(p.sourceLines) {
+				snippet = p.sourceLines[p.curToken.Line-1]
+			}
+			msg := "Invalid or unrecognized statement in block. This may be due to an undefined function, missing import, or syntax error."
+			if p.curToken.Type == lexer.IDENT {
+				msg += " (Did you forget to define or import '" + p.curToken.Literal + "'?)"
+			}
 			p.addError(utils.ParseError{
 				Kind:    utils.InvalidSyntax,
-				Message: "nil statement in block",
+				Message: msg,
 				Line:    p.curToken.Line,
 				Column:  p.curToken.Column,
+				Snippet: snippet,
+				Caret:   p.curToken.Column,
+				Fix:     "Check for typos, missing imports, or undefined functions.",
 			})
 			// Defensive: advance to avoid infinite loop
 			if p.curToken.Type != lexer.RBRACE && p.curToken.Type != lexer.EOF {

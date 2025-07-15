@@ -1,134 +1,31 @@
-// C stdlib.h bindings
+// C stdlib.h direct bindings for Aether
 // #include <stdlib.h>
 
-func malloc(size) {
-    return c_malloc(size)
-}
-
-func calloc(nmemb, size) {
-    return c_calloc(nmemb, size)
-}
-
-func realloc(ptr, size) {
-    return c_realloc(ptr, size)
-}
-
-func free(ptr) {
-    return c_free(ptr)
-}
-
-func abort() {
-    return c_abort()
-}
-
-func exit(status) {
-    return c_exit(status)
-}
-
-func atexit(func) {
-    return c_atexit(func)
-}
-
-func system(command) {
-    return c_system(command)
-}
-
-func getenv(name) {
-    return c_getenv(name)
-}
-
-func putenv(string) {
-    return c_putenv(string)
-}
-
-func setenv(name, value, overwrite) {
-    return c_setenv(name, value, overwrite)
-}
-
-func unsetenv(name) {
-    return c_unsetenv(name)
-}
-
-func rand() {
-    return c_rand()
-}
-
-func srand(seed) {
-    return c_srand(seed)
-}
-
-func atoi(str) {
-    return c_atoi(str)
-}
-
-func atol(str) {
-    return c_atol(str)
-}
-
-func atof(str) {
-    return c_atof(str)
-}
-
-func strtol(str, endptr, base) {
-    return c_strtol(str, endptr, base)
-}
-
-func strtoul(str, endptr, base) {
-    return c_strtoul(str, endptr, base)
-}
-
-func strtod(str, endptr) {
-    return c_strtod(str, endptr)
-}
-
-func abs(j) {
-    return c_abs(j)
-}
-
-func labs(j) {
-    return c_labs(j)
-}
-
-func llabs(j) {
-    return c_llabs(j)
-}
-
-func div(numer, denom) {
-    return c_div(numer, denom)
-}
-
-func ldiv(numer, denom) {
-    return c_ldiv(numer, denom)
-}
-
-func lldiv(numer, denom) {
-    return c_lldiv(numer, denom)
-}
-
-func qsort(base, nmemb, size, compar) {
-    return c_qsort(base, nmemb, size, compar)
-}
-
-func bsearch(key, base, nmemb, size, compar) {
-    return c_bsearch(key, base, nmemb, size, compar)
-}
-
-func mblen(s, n) {
-    return c_mblen(s, n)
-}
-
-func mbtowc(pwc, s, n) {
-    return c_mbtowc(pwc, s, n)
-}
-
-func wctomb(s, wchar) {
-    return c_wctomb(s, wchar)
-}
-
-func mbstowcs(pwcs, s, n) {
-    return c_mbstowcs(pwcs, s, n)
-}
-
-func wcstombs(s, pwcs, n) {
-    return c_wcstombs(s, pwcs, n)
-} 
+// foreign
+func malloc(size)
+// foreign
+func calloc(nmemb, size)
+// foreign
+func realloc(ptr, size)
+// foreign
+func free(ptr)
+// foreign
+func abort()
+// foreign
+func exit(status)
+// foreign
+func atexit(funcptr)
+// foreign
+func getenv(name)
+// foreign
+func system(command)
+// foreign
+func atoi(str)
+// foreign
+func atof(str)
+// foreign
+func atol(str)
+// foreign
+func rand()
+// foreign
+func srand(seed) 
