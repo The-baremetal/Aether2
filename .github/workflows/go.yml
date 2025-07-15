@@ -129,7 +129,7 @@ jobs:
           if [ -f assets/maintainer.txt ]; then
             MAINTAINER=$(cat assets/maintainer.txt | tr -d '\n')
           else
-            MAINTAINER="Aether Dev <noreply@aether.org>"
+            MAINTAINER="luohoa97 <luohoa97@users.noreply.github.com>"
           fi
           echo "maintainer=$MAINTAINER" >> $GITHUB_OUTPUT
           
@@ -137,7 +137,7 @@ jobs:
           if [ -f assets/homepage.txt ]; then
             HOMEPAGE=$(cat assets/homepage.txt | tr -d '\n')
           else
-            HOMEPAGE="https://aether.org"
+            HOMEPAGE="https://aetherc.vercel.app"
           fi
           echo "homepage=$HOMEPAGE" >> $GITHUB_OUTPUT
 
@@ -213,12 +213,12 @@ jobs:
           # DEB package - use control file from assets if available
           mkdir -p dist/deb/DEBIAN
           if [ -f assets/debian/control ]; then
-            # Use template from assets and substitute variables
-            sed -e "s/{{VERSION}}/${{ steps.pkg_meta.outputs.version }}/g" \
-                -e "s/{{ARCH}}/${GOARCH}/g" \
-                -e "s/{{MAINTAINER}}/${{ steps.pkg_meta.outputs.maintainer }}/g" \
-                -e "s/{{DESCRIPTION}}/${{ steps.pkg_meta.outputs.description }}/g" \
-                -e "s/{{HOMEPAGE}}/${{ steps.pkg_meta.outputs.homepage }}/g" \
+            # Use template from assets and substitute variables (using | as delimiter to avoid URL issues)
+            sed -e "s|{{VERSION}}|${{ steps.pkg_meta.outputs.version }}|g" \
+                -e "s|{{ARCH}}|${GOARCH}|g" \
+                -e "s|{{MAINTAINER}}|${{ steps.pkg_meta.outputs.maintainer }}|g" \
+                -e "s|{{DESCRIPTION}}|${{ steps.pkg_meta.outputs.description }}|g" \
+                -e "s|{{HOMEPAGE}}|${{ steps.pkg_meta.outputs.homepage }}|g" \
                 assets/debian/control > dist/deb/DEBIAN/control
           else
             # Fallback to inline control file
@@ -283,9 +283,9 @@ jobs:
             # Use Flatpak manifest from assets if available
             if [ -f assets/flatpak/org.aether.Aether.yaml ]; then
               mkdir -p flatpak
-              # Copy manifest and substitute variables
-              sed -e "s/{{VERSION}}/${{ steps.pkg_meta.outputs.version }}/g" \
-                  -e "s/{{DESCRIPTION}}/${{ steps.pkg_meta.outputs.description }}/g" \
+              # Copy manifest and substitute variables (using | as delimiter)
+              sed -e "s|{{VERSION}}|${{ steps.pkg_meta.outputs.version }}|g" \
+                  -e "s|{{DESCRIPTION}}|${{ steps.pkg_meta.outputs.description }}|g" \
                   assets/flatpak/org.aether.Aether.yaml > flatpak/org.aether.Aether.yaml
               
               # Copy desktop file if it exists in assets
@@ -313,7 +313,7 @@ jobs:
           runtime-version: '23.08'
           sdk: org.freedesktop.Sdk
           command: aether
-          
+
           finish-args:
             - --share=ipc
             - --socket=x11
@@ -323,7 +323,7 @@ jobs:
             - --filesystem=xdg-desktop
             - --filesystem=xdg-download
             - --share=network
-          
+
           modules:
             - name: aether
               buildsystem: simple
