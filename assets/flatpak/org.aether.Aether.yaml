@@ -1,0 +1,38 @@
+app-id: org.aether.Aether
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: aether
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --filesystem=home
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-desktop
+  - --filesystem=xdg-download
+  - --share=network
+  - --filesystem=host  # Allow access to host filesystem for development
+
+modules:
+  - name: aether
+    buildsystem: simple
+    build-commands:
+      - install -D aether /app/bin/aether
+      - mkdir -p /app/share/aether
+      - cp -r packages/* /app/share/aether/
+      - install -D org.aether.Aether.desktop /app/share/applications/org.aether.Aether.desktop
+      - install -D icon-256x256.png /app/share/icons/hicolor/128x128/apps/org.aether.Aether.png
+      - install -D icon-256x256.png /app/share/icons/hicolor/64x64/apps/org.aether.Aether.png
+    sources:
+      - type: file
+        path: ../dist/aether-linux_{{GOARCH}}
+        dest-filename: aether
+      - type: dir
+        path: ../packages
+        dest: packages
+      - type: file
+        path: ../assets/icon-256x256.png
+      - type: file
+        path: org.aether.Aether.desktop
