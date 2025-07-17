@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Add /usr/local/bin to PATH if not already present
+if ! grep -q "/usr/local/bin" /etc/environment; then
+    echo 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/environment
+fi
+
+# Create symlink if it doesn't exist
+if [ ! -L /usr/local/bin/aether ]; then
+    ln -sf /usr/local/aether/bin/aether /usr/local/bin/aether
+fi
+
+echo "Aether has been installed successfully!"
+echo "Run 'aether --help' to get started."

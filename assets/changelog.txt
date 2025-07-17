@@ -1,0 +1,7 @@
+Aether Programming Language Changelog
+====================================
+
+Version 0.4.0
+- First crossplatform release
+
+For more information, visit: https://github.com/The-baremetal/Aether2

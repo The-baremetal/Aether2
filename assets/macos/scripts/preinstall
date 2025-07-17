@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# Remove old installation if it exists
+if [ -d "/usr/local/aether" ]; then
+    rm -rf /usr/local/aether
+fi
+
+if [ -L "/usr/local/bin/aether" ]; then
+    rm -f /usr/local/bin/aether
+fi
