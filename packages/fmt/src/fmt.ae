@@ -1,4 +1,4 @@
-import c.stdio
+import c/stdio
 
 fn Print(s: string) {
     c.stdio.printf("%s", s)

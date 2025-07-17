@@ -1,4 +1,2 @@
-import stdio
-
-stdio.printf("🍕 Hello from helloworld!")
-stdio.printf("Your Aether project is ready to build!")
+import "stdio"
+printf("hello, world!\n")

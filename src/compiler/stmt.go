@@ -97,5 +97,7 @@ func compileStmt(stmt parser.Statement, ctx *CompilerContext) {
 		// Create a dummy value for the module symbol
 		dummyValue := constant.NewInt(types.I32, 0)
 		ctx.SetSymbol(moduleName, dummyValue)
+	case *parser.ExpressionStatement:
+		compileExpr(s.Expr, ctx)
 	}
 }

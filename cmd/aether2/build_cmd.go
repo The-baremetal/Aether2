@@ -5,6 +5,7 @@ import (
 	compiler_pkg "aether/src/compiler"
 	"aether/src/lexer"
 	"aether/src/parser"
+	"aether/src/scheduler"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
+	"sync"
 )
 
 // Project configuration structure
@@ -384,7 +386,7 @@ func doBuild(args []string) {
 		imports, err := analysis.AnalyzeImports(filesToBuild)
 		must(err)
 
-		if len(analysis.DetectCycles(imports)) > 0 {
+		if len(scheduler.DetectCycles(imports)) > 0 {
 			fmt.Println("Error: Circular imports detected")
 			os.Exit(1)
 		}
@@ -447,7 +449,7 @@ func doBuild(args []string) {
 		allFiles = append(allFiles, f)
 	}
 
-	sortedFiles, err := analysis.TopoSort(allFiles, resolvedImports)
+	sortedFiles, err := scheduler.TopoSort(resolvedImports)
 	must(err)
 
 	if !buildFlags.quiet {
@@ -457,93 +459,86 @@ func doBuild(args []string) {
 	var objectFiles []string
 	var allParseErrors []utils.ParseError
 	var moduleSymbols map[string]map[string]interface{} = make(map[string]map[string]interface{})
-
-	// Determine the entry file (first in filesToBuild)
 	entryFile := ""
 	if len(filesToBuild) > 0 {
 		entryFile = filesToBuild[0]
 	}
 
+	jobs := make(map[string]func())
+	objectFilesMu := &sync.Mutex{}
+	parseErrorsMu := &sync.Mutex{}
+
 	for _, file := range sortedFiles {
-		if buildFlags.verbose {
-			fmt.Printf("  Compiling %s\n", file)
-		}
-
-		content, err := os.ReadFile(file)
-		must(err)
-
-		l := lexer.NewLexer(string(content))
-
-		// Emit tokens if requested
-		if buildFlags.emitTokens {
-			fmt.Printf("=== Tokens for %s ===\n", file)
-			tokens := l.Tokenize()
-			for i, tok := range tokens {
-				fmt.Printf("%3d: %-12s '%s' (line %d, col %d)\n",
-					i, tok.Type, tok.Literal, tok.Line, tok.Column)
+		f := file
+		jobs[f] = func() {
+			content, err := os.ReadFile(f)
+			must(err)
+			l := lexer.NewLexer(string(content))
+			if buildFlags.emitTokens {
+				fmt.Printf("=== Tokens for %s ===\n", f)
+				tokens := l.Tokenize()
+				for i, tok := range tokens {
+					fmt.Printf("%3d: %-12s '%s' (line %d, col %d)\n", i, tok.Type, tok.Literal, tok.Line, tok.Column)
 				}
-			fmt.Println()
-		}
-
-		p := parser.NewParser(l)
-		p.SetFile(file)
-		if file == entryFile {
-			p.IsEntryFile = true
-		} else {
-			p.IsEntryFile = false
-		}
-		ast := p.Parse()
-
-		if len(p.Errors.Errors) > 0 {
-			for _, err := range p.Errors.Errors {
-				allParseErrors = append(allParseErrors, err)
+				fmt.Println()
 			}
-			continue
-		}
-
-		// Extract module symbols for linking
-		moduleName := strings.TrimSuffix(filepath.Base(file), ".ae")
-		moduleSymbols[moduleName] = extractModuleSymbols(ast)
-
-		// Compile with enhanced options
-		ir := compiler_pkg.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols)
-
-		baseName := strings.TrimSuffix(file, ".ae")
-
-		// Generate different outputs based on flags
-		if buildFlags.emitIR || buildFlags.emitLLVM {
-			llFile := baseName + ".ll"
-			must(os.WriteFile(llFile, []byte(ir), 0644))
-			if buildFlags.verbose {
-				fmt.Printf("    Generated IR: %s\n", llFile)
+			p := parser.NewParser(l)
+			p.SetFile(f)
+			if f == entryFile {
+				p.IsEntryFile = true
+			} else {
+				p.IsEntryFile = false
 			}
-		}
-
-		if buildFlags.emitASM {
-			asmFile := baseName + ".s"
-			generateAssembly(ir, asmFile)
-			if buildFlags.verbose {
-				fmt.Printf("    Generated ASM: %s\n", asmFile)
+			ast := p.Parse()
+			if len(p.Errors.Errors) > 0 {
+				parseErrorsMu.Lock()
+				for _, err := range p.Errors.Errors {
+					allParseErrors = append(allParseErrors, err)
+				}
+				parseErrorsMu.Unlock()
+				return
 			}
-		}
-
-		if buildFlags.emitBitcode {
-			bcFile := baseName + ".bc"
-			generateBitcode(ir, bcFile)
-			if buildFlags.verbose {
-				fmt.Printf("    Generated Bitcode: %s\n", bcFile)
+			moduleName := strings.TrimSuffix(filepath.Base(f), ".ae")
+			moduleSymbols[moduleName] = extractModuleSymbols(ast)
+			ir := compiler_pkg.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols)
+			baseName := strings.TrimSuffix(f, ".ae")
+			if buildFlags.emitIR || buildFlags.emitLLVM {
+				llFile := baseName + ".ll"
+				must(os.WriteFile(llFile, []byte(ir), 0644))
+				if buildFlags.verbose {
+					fmt.Printf("    Generated IR: %s\n", llFile)
+				}
 			}
-		}
-
-		if buildFlags.emitObj || buildFlags.emitExe {
-			objFile := baseName + ".o"
-			objectFiles = append(objectFiles, objFile)
-			generateObjectFile(ir, objFile)
-			if buildFlags.verbose {
-				fmt.Printf("    Generated Object: %s\n", objFile)
+			if buildFlags.emitASM {
+				asmFile := baseName + ".s"
+				generateAssembly(ir, asmFile)
+				if buildFlags.verbose {
+					fmt.Printf("    Generated ASM: %s\n", asmFile)
+				}
+			}
+			if buildFlags.emitBitcode {
+				bcFile := baseName + ".bc"
+				generateBitcode(ir, bcFile)
+				if buildFlags.verbose {
+					fmt.Printf("    Generated Bitcode: %s\n", bcFile)
+				}
+			}
+			if buildFlags.emitObj || buildFlags.emitExe {
+				objFile := baseName + ".o"
+				objectFilesMu.Lock()
+				objectFiles = append(objectFiles, objFile)
+				objectFilesMu.Unlock()
+				generateObjectFile(ir, objFile)
+				if buildFlags.verbose {
+					fmt.Printf("    Generated Object: %s\n", objFile)
+				}
 			}
 		}
 	}
+
+	maxWorkers := buildFlags.threads
+	pool := scheduler.NewPool(maxWorkers)
+	scheduler.RunBatches(jobs, resolvedImports, pool)
 
 	if len(allParseErrors) > 0 {
 		summary := utils.GroupErrorsByFile(allParseErrors)

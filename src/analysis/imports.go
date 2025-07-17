@@ -142,3 +142,26 @@ func IsExported(name string) bool {
 func IsStdlibFunction(name string) bool {
 	return false
 }
+
+func IsValidImportPath(path string) bool {
+  if path == "" {
+    return false
+  }
+  if strings.HasPrefix(path, ".") || strings.HasPrefix(path, "/") {
+    return true
+  }
+  if strings.Contains(path, "..") {
+    return false
+  }
+  return true
+}
+
+func ResolveImportPath(importPath, currentDir string) string {
+  if strings.HasPrefix(importPath, "/") {
+    return importPath + ".ae"
+  }
+  if strings.HasPrefix(importPath, ".") {
+    return filepath.Join(currentDir, importPath+".ae")
+  }
+  return filepath.Join(currentDir, importPath+".ae")
+}

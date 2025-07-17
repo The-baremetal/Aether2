@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"aether/lib/utils"
+	"aether/src/scheduler"
 
 	"github.com/BurntSushi/toml"
 )
@@ -44,8 +45,20 @@ func AnalyzeProject(projectPath string) *AnalysisResult {
 
 	validateImports(result)
 	checkDependencies(result)
-	detectCycles(result)
+
+	cycles := scheduler.DetectCycles(result.Dependencies)
+	if len(cycles) > 0 {
+		result.Cycles = cycles
+		result.Valid = false
+		result.Errors = append(result.Errors, utils.ParseError{Message: "Circular dependency detected"})
+	}
+
 	checkUnusedDeclarations(result)
+
+	if len(result.Unused) > 0 {
+		pruneImports(result, result.Unused)
+	}
+
 	checkUndefinedReferences(result)
 
 	return result
@@ -70,6 +83,14 @@ func AnalyzeAST(ast *parser.ASTNode) *AnalysisResult {
 
 	extractCIncludes(ast, result)
 	return result
+}
+
+// pruneImports removes unused imports from the dependency graph and import map.
+func pruneImports(result *AnalysisResult, unused []string) {
+	for _, name := range unused {
+		delete(result.Dependencies, name)
+		delete(result.Imports, name)
+	}
 }
 
 func extractCIncludes(node *parser.ASTNode, result *AnalysisResult) {
@@ -691,40 +712,7 @@ func checkDependencies(result *AnalysisResult) {
 	}
 }
 
-func detectCycles(result *AnalysisResult) {
-	// Use topological sort to detect cycles
-	visited := make(map[string]bool)
-	recStack := make(map[string]bool)
 
-	for path := range result.Dependencies {
-		if !visited[path] {
-			if hasCycle(path, result.Dependencies, visited, recStack, []string{}) {
-				result.Cycles = append(result.Cycles, []string{})
-				result.Valid = false
-				result.Errors = append(result.Errors, utils.ParseError{Message: "Circular import detected"})
-			}
-		}
-	}
-}
-
-func hasCycle(path string, deps map[string][]string, visited, recStack map[string]bool, pathStack []string) bool {
-	visited[path] = true
-	recStack[path] = true
-	pathStack = append(pathStack, path)
-
-	for _, dep := range deps[path] {
-		if !visited[dep] {
-			if hasCycle(dep, deps, visited, recStack, pathStack) {
-				return true
-			}
-		} else if recStack[dep] {
-			return true
-		}
-	}
-
-	recStack[path] = false
-	return false
-}
 
 func checkUnusedDeclarations(result *AnalysisResult) {
 	for name, funcInfo := range result.Functions {
