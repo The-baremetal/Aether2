@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 	"aether/src/analysis"
 	compiler_pkg "aether/src/compiler"
 	"aether/src/lexer"
@@ -12,13 +16,63 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 
 	"aether/lib/utils"
+	"aether/src/buildcache"
 
 	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
-	"sync"
 )
+
+// BuildCacheEntry stores metadata for a single file
+type BuildCacheEntry struct {
+	Hash         string            `json:"hash"`
+	Output       string            `json:"output"`
+	Deps         []string          `json:"deps"`
+	DepHashes    map[string]string `json:"dep_hashes"`
+	LastBuild    int64             `json:"last_build"`
+}
+
+// BuildCache stores the build cache for the project
+type BuildCache struct {
+	Files map[string]BuildCacheEntry `json:"files"`
+}
+
+func LoadCache(path string) (*BuildCache, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return &BuildCache{Files: make(map[string]BuildCacheEntry)}, nil
+	}
+	var cache BuildCache
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return &BuildCache{Files: make(map[string]BuildCacheEntry)}, nil
+	}
+	return &cache, nil
+}
+
+func SaveCache(path string, cache *BuildCache) error {
+	data, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, data, 0644)
+}
+
+func fileHash(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		f.Close()
+		return "", err
+	}
+	f.Close()
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
 
 // Project configuration structure
 
@@ -464,11 +518,66 @@ func doBuild(args []string) {
 		entryFile = filesToBuild[0]
 	}
 
+	cachePath := filepath.Join(projectRoot, ".aetherbuildcache.json")
+	cache, _ := buildcache.LoadCache(cachePath)
+
+	stale := make(map[string]bool)
+	reasons := make(map[string]string)
+
+	// Helper to check if a file is stale
+	var isStale func(file string) bool
+	isStale = func(file string) bool {
+		entry, ok := cache.Files[file]
+		hash, err := buildcache.FileHash(file)
+		if err != nil {
+			stale[file] = true
+			reasons[file] = "missing or unreadable"
+			return true
+		}
+		if !ok || entry.Hash != hash {
+			stale[file] = true
+			reasons[file] = "changed"
+			return true
+		}
+		// Check output exists
+		output := strings.TrimSuffix(file, ".ae") + ".o"
+		if _, err := os.Stat(output); err != nil {
+			stale[file] = true
+			reasons[file] = "missing output"
+			return true
+		}
+		// Check dependencies
+		for _, dep := range resolvedImports[file] {
+			if isStale(dep) {
+				stale[file] = true
+				reasons[file] = fmt.Sprintf("dependency %s changed", dep)
+				return true
+			}
+			depHash, _ := buildcache.FileHash(dep)
+			if entry.DepHashes == nil || entry.DepHashes[dep] != depHash {
+				stale[file] = true
+				reasons[file] = fmt.Sprintf("dependency %s changed", dep)
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, file := range sortedFiles {
+		isStale(file)
+	}
+
 	jobs := make(map[string]func())
 	objectFilesMu := &sync.Mutex{}
 	parseErrorsMu := &sync.Mutex{}
 
 	for _, file := range sortedFiles {
+		if !stale[file] {
+			if buildFlags.verbose {
+				fmt.Printf("Up to date: %s\n", file)
+			}
+			continue
+		}
 		f := file
 		jobs[f] = func() {
 			content, err := os.ReadFile(f)
@@ -533,6 +642,23 @@ func doBuild(args []string) {
 					fmt.Printf("    Generated Object: %s\n", objFile)
 				}
 			}
+			// Update cache after build
+			fileHashVal, _ := buildcache.FileHash(f)
+			depHashes := make(map[string]string)
+			for _, dep := range resolvedImports[f] {
+				dh, _ := buildcache.FileHash(dep)
+				depHashes[dep] = dh
+			}
+			cache.Files[f] = buildcache.BuildCacheEntry{
+				Hash:      fileHashVal,
+				Output:    baseName + ".o",
+				Deps:      resolvedImports[f],
+				DepHashes: depHashes,
+				LastBuild: time.Now().Unix(),
+			}
+		}
+		if reason, ok := reasons[file]; ok {
+			fmt.Printf("Rebuilding %s (%s)\n", file, reason)
 		}
 	}
 
@@ -545,6 +671,8 @@ func doBuild(args []string) {
 		fmt.Print(utils.FormatErrorSummary(summary))
 		os.Exit(1)
 	}
+
+	_ = buildcache.SaveCache(cachePath, cache)
 
 	// Linking phase
 	if buildFlags.emitExe && len(objectFiles) > 0 {
