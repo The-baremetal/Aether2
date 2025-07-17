@@ -520,6 +520,7 @@ func doBuild(args []string) {
 
 	cachePath := filepath.Join(projectRoot, ".aetherbuildcache.json")
 	cache, _ := buildcache.LoadCache(cachePath)
+	cacheMu := &sync.Mutex{}
 
 	stale := make(map[string]bool)
 	reasons := make(map[string]string)
@@ -649,6 +650,7 @@ func doBuild(args []string) {
 				dh, _ := buildcache.FileHash(dep)
 				depHashes[dep] = dh
 			}
+			cacheMu.Lock()
 			cache.Files[f] = buildcache.BuildCacheEntry{
 				Hash:      fileHashVal,
 				Output:    baseName + ".o",
@@ -656,6 +658,7 @@ func doBuild(args []string) {
 				DepHashes: depHashes,
 				LastBuild: time.Now().Unix(),
 			}
+			cacheMu.Unlock()
 		}
 		if reason, ok := reasons[file]; ok {
 			fmt.Printf("Rebuilding %s (%s)\n", file, reason)
