@@ -25,6 +25,12 @@ AetherC stands for **Aether Compiler**. Any resemblance to other names is purely
 
 ---
 
+Aether is a multiparadym, simple language. 
+
+⚠️Aether is largely incomplete but it is functional
+
+Don't expect a fully working language. This was written mostly for myself and I decided to publish it. 
+
 ## Get started
 - [Read documentation 📖](https://github.com/The-baremetal/Aether2/blob/main/docs)
 - [Join the wiki 📚](https://github.com/The-baremetal/Aether2/wiki)
