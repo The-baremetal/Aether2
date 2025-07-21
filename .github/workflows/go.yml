@@ -556,6 +556,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -570,6 +573,14 @@ jobs:
           find dist -type f -exec cp {} flat/ \;
           rm -rf dist
           mv flat dist
+
+      - name: Publish to crates.io
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cargo login ${{ secrets.CRATES_TOKEN }}
+          cargo publish --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
 
       - name: Create GitHub Release and upload files
         uses: softprops/action-gh-release@v2
