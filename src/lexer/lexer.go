@@ -244,13 +244,31 @@ func (l *Lexer) readNumber() string {
 
 func (l *Lexer) readString() string {
 	l.readChar()
-	pos := l.Position
+	var buf []byte
 	for l.Ch != '"' && l.Ch != 0 {
+		if l.Ch == '\\' {
+			l.readChar()
+			switch l.Ch {
+			case 'n':
+				buf = append(buf, '\n')
+			case 't':
+				buf = append(buf, '\t')
+			case 'r':
+				buf = append(buf, '\r')
+			case '"':
+				buf = append(buf, '"')
+			case '\\':
+				buf = append(buf, '\\')
+			default:
+				buf = append(buf, '\\', l.Ch)
+			}
+		} else {
+			buf = append(buf, l.Ch)
+		}
 		l.readChar()
 	}
-	s := l.Input[pos:l.Position]
 	l.readChar()
-	return s
+	return string(buf)
 }
 
 func (l *Lexer) readCComment() string {

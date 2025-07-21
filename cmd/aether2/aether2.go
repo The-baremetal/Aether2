@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	Version   = "0.3.0-nightly"
-	BuildDate = "2024-01-01"
+	Version   = "0.4.0-nightly"
+	BuildDate = "2025-20-7"
+	Format = "yy-mm-dd"
 	Commit    = "development"
 )
 
@@ -91,25 +92,6 @@ PowerShell:
 func setupRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "aether",
-		Short: "🍕 Aether Language - Fast, Simple, Delicious",
-		Long: `Aether is a modern programming language that's fast, simple, and delicious.
-
-Features:
-  • LLVM-powered compilation for maximum performance
-  • Mold linker for lightning-fast builds
-  • Simple, consistent syntax
-  • Built-in library support
-  • Cross-platform compilation
-  • Professional CMake integration
-
-Examples:
-  aether build                    # Build current project
-  aether build --create-library   # Create shared library
-  aether library --analyze libc   # Analyze system library
-  aether cross --target linux     # Cross-compile for Linux
-
-Documentation: https://aether-lang.org
-Repository:   https://github.com/aether-lang/aether`,
 		Version: Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -138,23 +120,15 @@ Repository:   https://github.com/aether-lang/aether`,
 
 	// Add commands
 	rootCmd.AddCommand(BuildCmd)
-	rootCmd.AddCommand(CrossCmd)
 	rootCmd.AddCommand(InitCmd)
 	rootCmd.AddCommand(CleanCmd)
-	rootCmd.AddCommand(InfoCmd)
-	rootCmd.AddCommand(DepsCmd)
-	rootCmd.AddCommand(ScaffoldCmd)
 	rootCmd.AddCommand(LintCmd)
 	rootCmd.AddCommand(UpdateCmd)
-	rootCmd.AddCommand(LibraryCmd)
 	rootCmd.AddCommand(VersionCmd)
-	rootCmd.AddCommand(DoctorCmd)
 	rootCmd.AddCommand(FormatCmd)
 	rootCmd.AddCommand(TestCmd)
 	rootCmd.AddCommand(DocsCmd)
-	rootCmd.AddCommand(PlaygroundCmd)
 	rootCmd.AddCommand(PackageCmd)
-	rootCmd.AddCommand(NewCmd)
 	rootCmd.AddCommand(CodemodCmd)
 
 	// Setup completion
@@ -191,18 +165,30 @@ Usage:
 	return rootCmd
 }
 
+func printSmartError(err error, context string) {
+	if err == nil {
+		return
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "unknown command") {
+		fmt.Fprintf(os.Stderr, "🦄🍕 Unknown command: %s\nDid you mean one of these? Try 'aether --help' for a list of commands!\n", context)
+	} else if strings.Contains(msg, "not found") || strings.Contains(msg, "No such file") {
+		fmt.Fprintf(os.Stderr, "🍕 Oops! %s\nDid you forget to create or specify the file?\n", msg)
+	} else if strings.Contains(msg, "permission denied") {
+		fmt.Fprintf(os.Stderr, "🍕 Permission denied! Try running as admin or check your file permissions.\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "🍕 Error: %s\n", msg)
+	}
+	os.Exit(1)
+}
+
 func main() {
 	rootCmd := setupRootCmd()
 
 	// Handle errors gracefully
 	if err := rootCmd.Execute(); err != nil {
 		if !quiet {
-			// Print error with context
-			if strings.Contains(err.Error(), "unknown command") {
-				fmt.Fprintf(os.Stderr, "🍕 Unknown command. Use 'aether --help' for available commands.\n")
-			} else {
-				fmt.Fprintf(os.Stderr, "🍕 Error: %v\n", err)
-			}
+			printSmartError(err, "")
 		}
 		os.Exit(1)
 	}

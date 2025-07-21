@@ -8,7 +8,8 @@ Installation on Android with Termux:
 2. Extract the archive: tar -xvf aether-android_arm64.tar
 3. Copy the binary: cp usr/local/aether/bin/aether $PREFIX/bin/
 4. Copy packages: cp -r usr/local/aether/packages $PREFIX/share/aether
-5. Run: aether --help
+5. Add usr/local/aether as an environment variable with the name "AETHERROOT"
+6. Run: aether --help
 
 Note: This binary requires Android API level 21 or higher.
 

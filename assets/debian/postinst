@@ -6,10 +6,21 @@ if ! grep -q "/usr/local/bin" /etc/environment; then
     echo 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' >> /etc/environment
 fi
 
-# Create symlink if it doesn't exist
+# Add AETHERROOT if not already present
+if ! grep -q "AETHERROOT=" /etc/environment; then
+    echo 'AETHERROOT="/usr/local/aether"' >> /etc/environment
+    source /etc/environment
+fi
+
+# Create symlink for aether if it doesn't exist
 if [ ! -L /usr/local/bin/aether ]; then
     ln -sf /usr/local/aether/bin/aether /usr/local/bin/aether
 fi
 
+# Set AETHERROOT for fish shell
+if command -v fish >/dev/null 2>&1; then
+    fish -c 'set -Ux AETHERROOT /usr/local/aether/packages'
+fi
+
 echo "Aether has been installed successfully!"
-echo "Run 'aether --help' to get started."
+echo "Your AETHERROOT is now set to /usr/local/aether/packages"

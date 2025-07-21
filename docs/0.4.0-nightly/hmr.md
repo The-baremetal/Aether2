@@ -1,4 +1,4 @@
-# Hot Module Reloading (HMR) in Aether 0.4.0-nightly 🍕🔥
+# Hot Module Reloading (HMR) in Aether
 
 Welcome to the future of rapid development in Aether! With HMR, you can script, build games, and develop engines with the speed of a dynamic language and the power of native code. No more restarts, no more lost state—just pure, hot-reloadable code vibes.
 

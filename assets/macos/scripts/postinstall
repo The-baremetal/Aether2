@@ -4,15 +4,22 @@ set -e
 # Create symlink
 ln -sf /usr/local/aether/bin/aether /usr/local/bin/aether
 
-# Add to PATH in common shell profiles
+# Add to PATH and set AETHERROOT in common shell profiles
 SHELLS=("$HOME/.bash_profile" "$HOME/.bashrc" "$HOME/.zshrc")
 for shell in "${SHELLS[@]}"; do
     if [ -f "$shell" ]; then
         if ! grep -q "/usr/local/aether/bin" "$shell"; then
             echo 'export PATH="/usr/local/aether/bin:$PATH"' >> "$shell"
         fi
+        if ! grep -q "AETHERROOT=" "$shell"; then
+            echo 'export AETHERROOT="/usr/local/aether"' >> "$shell"
+        fi
+        # Source the profile immediately after updating it
+        # shellcheck disable=SC1090
+        source "$shell"
     fi
 done
 
 echo "Aether has been installed successfully!"
+echo "AETHERROOT is set to /usr/local/aether!"
 echo "Run 'aether --help' to get started."

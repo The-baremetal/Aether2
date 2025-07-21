@@ -1,15 +1,15 @@
-Welcome to Aether! The language that stays fresh, simple, and delicious. No crusty old syntax, just pure code vibes. Here's everything you need to know, all in one place!
+Welcome to Aether!
 
 ---
 
-## 0. Program Structure - Minimal Typing! 🍕
+## 0. Program Structure
 
 Aether is designed for **minimal typing**. Write your code directly at the top level - no boilerplate needed!
 
 ```aether
 // Just write your code directly!
 import "fmt"
-fmt.Print("🍕 Hello from Aether!")
+fmt.Print("Hello from Aether!")
 x = 10
 y = 20
 fmt.Print("Sum:", x + y)
@@ -36,7 +36,7 @@ fmt.Print("Hello!")
 
 ---
 
-## 0.5. Standard Library Usage 🍕
+## 0.5. Standard Library Usage
 
 Aether provides built-in functions through imports:
 

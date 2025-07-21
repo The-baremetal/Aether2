@@ -81,6 +81,28 @@ func AnalyzeAST(ast *parser.ASTNode) *AnalysisResult {
 		CIncludes:    []CInclude{},
 	}
 
+	// DEBUG: Print all imports being processed
+	fmt.Println("[Aether-DEBUG] AnalyzeAST: Imports in AST:")
+	if ast != nil && ast.Inner != nil {
+		for _, node := range ast.Inner {
+			if node != nil && node.NodeKind == parser.ImportKind {
+				fmt.Println("[Aether-DEBUG]   Import node:", node.Left, node.Right)
+				// Actually resolve the import using AnalyzeImportStatement
+				var importName string
+				if node.Left != nil {
+					if val, ok := node.Left.Value.(string); ok {
+						importName = val
+					}
+				}
+				if importName != "" {
+					dummyIdent := &parser.Identifier{Value: importName}
+					dummyImport := &parser.Import{Name: dummyIdent}
+					AnalyzeImportStatement(dummyImport, "<ast>", result)
+				}
+			}
+		}
+	}
+
 	extractCIncludes(ast, result)
 	return result
 }
@@ -442,6 +464,7 @@ func analyzeStatement(stmt parser.Statement, filePath string, result *AnalysisRe
 
 func analyzeImportStatement(importStmt *parser.Import, filePath string, result *AnalysisResult) {
 	importPath := importStmt.Name.Value
+	fmt.Println("[Aether-DEBUG] analyzeImportStatement: Importing:", importPath, "from", filePath)
 	importInfo := ImportInfo{
 		Path:   importPath,
 		Valid:  true,
@@ -458,7 +481,7 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 	// First try to resolve using dependency configuration
 	projectRoot := findProjectRoot(filepath.Dir(filePath))
 	configPath := filepath.Join(projectRoot, "aether.toml")
-	
+
 	if data, err := os.ReadFile(configPath); err == nil {
 		var config struct {
 			Dependencies map[string]string `toml:"dependencies"`
@@ -469,6 +492,7 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 				if _, err := os.Stat(fullDepPath); err == nil {
 					importInfo.Exists = true
 					importInfo.Resolved = fullDepPath
+					fmt.Println("[Aether-DEBUG] analyzeImportStatement: Resolved via dependencies:", fullDepPath)
 					result.Imports[importPath] = importInfo
 					return
 				}
@@ -482,13 +506,16 @@ func analyzeImportStatement(importStmt *parser.Import, filePath string, result *
 		if _, err := os.Stat(resolvedPath); err == nil {
 			importInfo.Exists = true
 			importInfo.Resolved = resolvedPath
+			fmt.Println("[Aether-DEBUG] analyzeImportStatement: Resolved via direct file:", resolvedPath)
 		} else {
 			importInfo.Errors = append(importInfo.Errors, "Imported file does not exist")
 			result.Errors = append(result.Errors, utils.ParseError{Message: fmt.Sprintf("%s: Imported file '%s' does not exist", filePath, importPath)})
+			fmt.Println("[Aether-DEBUG] analyzeImportStatement: File does not exist:", resolvedPath)
 		}
 	}
 
 	result.Imports[importPath] = importInfo
+	fmt.Println("[Aether-DEBUG] analyzeImportStatement: Final ImportInfo:", importInfo)
 }
 
 func analyzeFunctionDeclaration(funcDecl *parser.Function, filePath string, result *AnalysisResult) {

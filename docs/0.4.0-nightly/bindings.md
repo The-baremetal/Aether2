@@ -1,4 +1,4 @@
-# C Bindings in Aether 0.4.0-nightly 🍕🔗
+# C Bindings in Aether
 
 Welcome to the world of C bindings in Aether! Here you’ll learn how to use C libraries the Aether way: direct, lowercase, and as easy as eating pizza with your hands.
 

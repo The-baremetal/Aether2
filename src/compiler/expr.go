@@ -2,6 +2,9 @@ package compiler
 
 import (
 	"aether/src/parser"
+	"fmt"
+	"os"
+	"aether/lib/utils"
 
 	"github.com/llir/llvm/ir"
 	"github.com/llir/llvm/ir/constant"
@@ -9,14 +12,27 @@ import (
 	"github.com/llir/llvm/ir/value"
 )
 
+var stringLiteralCounter int
+
 func compileExpr(expr parser.Expression, ctx *CompilerContext) value.Value {
+	ctx.DebugPrint("compileExpr: " + fmt.Sprintf("%T", expr))
 	switch e := expr.(type) {
 	case *parser.Identifier:
+		ctx.DebugPrint("  [IR] Looking up symbol: " + e.Value)
 		val, ok := ctx.GetSymbol(e.Value)
 		if ok {
+			ctx.DebugPrint("  [IR] Symbol found: " + e.Value)
+			// Only emit a load if the symbol is a variable (pointer), not a function
+			if fn, isFunc := val.(*ir.Func); isFunc {
+				return fn
+			}
 			return ctx.builder.NewLoad(val.Type(), val)
 		}
-		return nil
+		ctx.DebugPrint("  [IR] Symbol NOT found: " + e.Value)
+		// If not found, treat as external function (foreign)
+		fn := ctx.module.NewFunc(e.Value, types.I32, ir.NewParam("format", types.NewPointer(types.I8)))
+		fn.Sig.Variadic = true
+		return fn
 	case *parser.Literal:
 		switch v := e.Value.(type) {
 		case int:
@@ -24,7 +40,13 @@ func compileExpr(expr parser.Expression, ctx *CompilerContext) value.Value {
 		case float64:
 			return constant.NewFloat(types.Double, v)
 		case string:
-			return constant.NewCharArrayFromString(v)
+			// Emit a global constant for each string literal, unique name per literal
+			name := fmt.Sprintf(".STR_%d", stringLiteralCounter)
+			stringLiteralCounter++
+			g := ctx.module.NewGlobalDef(name, constant.NewCharArrayFromString(v+"\x00"))
+			zero := constant.NewInt(types.I32, 0)
+			gep := ir.NewGetElementPtr(g.Typ.ElemType, g, zero, zero)
+			return gep
 		case bool:
 			if v {
 				return constant.NewInt(types.I1, 1)
@@ -53,8 +75,37 @@ func compileExpr(expr parser.Expression, ctx *CompilerContext) value.Value {
 			}
 		}
 		fn := compileExpr(e.Function, ctx)
+		if fn == nil {
+			funcName := "<unknown>"
+			if ident, ok := e.Function.(*parser.Identifier); ok {
+				funcName = ident.Value
+			}
+			perr := utils.ParseError{
+				Kind:    utils.UndefinedReference,
+				Message: fmt.Sprintf("Undefined function or symbol: '%s' (Did you forget to import stdlib or set AETHERROOT? Check your imports!)", funcName),
+				Line:    0,
+				Column:  0,
+				File:    "",
+				Snippet: "",
+				Caret:   0,
+				Fix:     "Import the correct package or check your AETHERROOT environment variable.",
+			}
+			fmt.Fprint(os.Stderr, utils.FormatErrorWithContext(perr))
+			os.Exit(1)
+		}
 		args := make([]value.Value, len(e.Args))
 		for i, arg := range e.Args {
+			if lit, ok := arg.(*parser.Literal); ok {
+				if str, ok := lit.Value.(string); ok {
+					name := fmt.Sprintf(".STR_%d", stringLiteralCounter)
+					stringLiteralCounter++
+					g := ctx.module.NewGlobalDef(name, constant.NewCharArrayFromString(str+"\x00"))
+					zero := constant.NewInt(types.I32, 0)
+					gep := ctx.builder.NewGetElementPtr(g.Typ.ElemType, g, zero, zero)
+					args[i] = gep
+					continue
+				}
+			}
 			args[i] = compileExpr(arg, ctx)
 		}
 		return ctx.builder.NewCall(fn, args...)

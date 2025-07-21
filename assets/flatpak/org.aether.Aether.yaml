@@ -15,6 +15,9 @@ finish-args:
   - --share=network
   - --filesystem=host  # Allow access to host filesystem for development
 
+environment:
+  AETHERROOT: /app/share/aether
+
 modules:
   - name: aether
     buildsystem: simple

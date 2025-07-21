@@ -26,5 +26,8 @@ func GetAetherRootPackagesDir() string {
 	if root == "" {
 		return ""
 	}
+	if filepath.Base(root) == "packages" {
+		return root
+	}
 	return filepath.Join(root, "packages")
 } 

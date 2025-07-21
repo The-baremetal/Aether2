@@ -12,7 +12,6 @@ import (
 	"aether/src/scheduler"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -251,27 +250,12 @@ var (
 		libraryRequires    string
 		libraryConflicts   string
 		libraryProvides    string
+		forceRebuild       bool
+		libcType           string
 	}
 
 	projectConfig ProjectConfig
 )
-
-// Add helper to find project root (where aether.toml lives)
-func findProjectRoot(start string) string {
-	dir := start
-	for {
-		configPath := filepath.Join(dir, "aether.toml")
-		if _, err := os.Stat(configPath); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "."
-}
 
 func doBuild(args []string) {
 	if buildFlags.help {
@@ -318,7 +302,9 @@ func doBuild(args []string) {
 				break
 			}
 		}
-		must(err)
+		if err != nil {
+			printSmartError(err, "build")
+		}
 		filesToBuild = files
 
 		// Apply configuration overrides
@@ -340,6 +326,13 @@ func doBuild(args []string) {
 
 		// Store config for later use
 		projectConfig = config
+
+		// After loading projectConfig, detect Windows and set linker/fuseLd accordingly
+		if runtime.GOOS == "windows" {
+			buildFlags.linker = "lld-link"
+			buildFlags.fuseLd = "lld"
+			projectConfig.Build.Linker = "lld-link"
+		}
 
 		// Initialize flag merger for compiler flags
 		flagMerger := compiler_pkg.NewFlagMerger()
@@ -364,14 +357,15 @@ func doBuild(args []string) {
 		for _, arg := range args {
 			info, err := os.Stat(arg)
 			if err != nil {
-				fmt.Printf("Error: Cannot access '%s': %v\n", arg, err)
-				os.Exit(1)
+				printSmartError(err, arg)
 			}
 
 			if info.IsDir() {
 				// Directory - find all .ae files in it
 				files, err := analysis.FindAetherFiles(arg)
-				must(err)
+				if err != nil {
+					printSmartError(err, arg)
+				}
 				filesToBuild = append(filesToBuild, files...)
 				buildDir = arg
 				projectRoot = findProjectRoot(arg)
@@ -381,8 +375,7 @@ func doBuild(args []string) {
 			} else {
 				// File - add it to the list
 				if !strings.HasSuffix(arg, ".aeth") {
-					fmt.Printf("Error: File '%s' is not an Aether file (.aeth)\n", arg)
-					os.Exit(1)
+					printSmartError(fmt.Errorf("File '%s' is not an Aether file (.aeth)", arg), arg)
 				}
 				filesToBuild = append(filesToBuild, arg)
 				buildDir = filepath.Dir(arg)
@@ -395,8 +388,7 @@ func doBuild(args []string) {
 	}
 
 	if len(filesToBuild) == 0 {
-		fmt.Println("No Aether files found to build.")
-		os.Exit(1)
+		printSmartError(fmt.Errorf("No Aether files found to build."), "build")
 	}
 
 	if buildFlags.quiet {
@@ -418,10 +410,7 @@ func doBuild(args []string) {
 		// Analyze dependencies
 		depAnalysis := analysis.AnalyzeDependencies(projectRoot)
 		if !depAnalysis.Valid {
-			fmt.Println("Dependency analysis failed:")
-			summary := utils.GroupErrorsByFile(depAnalysis.Errors)
-			fmt.Print(utils.FormatErrorSummary(summary))
-			os.Exit(1)
+			printSmartError(fmt.Errorf("Dependency analysis failed"), "dependency analysis")
 		}
 
 		if len(depAnalysis.Warnings) > 0 {
@@ -433,16 +422,16 @@ func doBuild(args []string) {
 
 		// Generate lock file if needed
 		if err := analysis.GenerateLockFile(projectRoot); err != nil {
-			fmt.Println("Failed to generate lock file:", err)
-			os.Exit(1)
+			printSmartError(fmt.Errorf("Failed to generate lock file: %v", err), "lock file")
 		}
 
 		imports, err := analysis.AnalyzeImports(filesToBuild)
-		must(err)
+		if err != nil {
+			printSmartError(err, "import analysis")
+		}
 
 		if len(scheduler.DetectCycles(imports)) > 0 {
-			fmt.Println("Error: Circular imports detected")
-			os.Exit(1)
+			printSmartError(fmt.Errorf("Circular imports detected"), "import analysis")
 		}
 
 		if buildFlags.verbose {
@@ -464,11 +453,15 @@ func doBuild(args []string) {
 	}
 
 	imports, err := analysis.AnalyzeImports(filesToBuild)
-	must(err)
+	if err != nil {
+		printSmartError(err, "import analysis")
+	}
 
 	// Resolve import paths to actual files
 	importedFiles, err := analysis.ResolveImportPathsToFiles(imports, projectRoot)
-	must(err)
+	if err != nil {
+		printSmartError(err, "import resolution")
+	}
 
 	// Create a mapping from import names to resolved file paths
 	importNameToPath := make(map[string]string)
@@ -490,6 +483,18 @@ func doBuild(args []string) {
 		resolvedImports[sourceFile] = resolvedPaths
 	}
 
+	// Ensure every file in jobs will be a key in resolvedImports
+	for _, f := range filesToBuild {
+		if _, ok := resolvedImports[f]; !ok {
+			resolvedImports[f] = []string{}
+		}
+	}
+	for _, f := range importedFiles {
+		if _, ok := resolvedImports[f]; !ok {
+			resolvedImports[f] = []string{}
+		}
+	}
+
 	// Combine source files with imported files, ensuring uniqueness
 	fileSet := make(map[string]struct{})
 	for _, f := range filesToBuild {
@@ -504,7 +509,9 @@ func doBuild(args []string) {
 	}
 
 	sortedFiles, err := scheduler.TopoSort(resolvedImports)
-	must(err)
+	if err != nil {
+		printSmartError(err, "topological sort")
+	}
 
 	if !buildFlags.quiet {
 		fmt.Println("Compiling", len(sortedFiles), "files...")
@@ -541,7 +548,12 @@ func doBuild(args []string) {
 			return true
 		}
 		// Check output exists
-		output := strings.TrimSuffix(file, ".ae") + ".o"
+		outputDir := filepath.Join(projectRoot, projectConfig.Build.OutputDirectory)
+		if outputDir == "" {
+			outputDir = "bin"
+		}
+		baseName := strings.TrimSuffix(filepath.Base(file), ".ae")
+		output := filepath.Join(outputDir, baseName+".o")
 		if _, err := os.Stat(output); err != nil {
 			stale[file] = true
 			reasons[file] = "missing output"
@@ -564,8 +576,15 @@ func doBuild(args []string) {
 		return false
 	}
 
-	for _, file := range sortedFiles {
-		isStale(file)
+	if buildFlags.forceRebuild {
+		for _, file := range sortedFiles {
+			stale[file] = true
+			reasons[file] = "forced rebuild"
+		}
+	} else {
+		for _, file := range sortedFiles {
+			isStale(file)
+		}
 	}
 
 	jobs := make(map[string]func())
@@ -581,8 +600,13 @@ func doBuild(args []string) {
 		}
 		f := file
 		jobs[f] = func() {
+			if buildFlags.verbose {
+				fmt.Printf("SUBMITTED JOB FOR: %s\n", f)
+			}
 			content, err := os.ReadFile(f)
-			must(err)
+			if err != nil {
+				printSmartError(err, f)
+			}
 			l := lexer.NewLexer(string(content))
 			if buildFlags.emitTokens {
 				fmt.Printf("=== Tokens for %s ===\n", f)
@@ -610,31 +634,47 @@ func doBuild(args []string) {
 			}
 			moduleName := strings.TrimSuffix(filepath.Base(f), ".ae")
 			moduleSymbols[moduleName] = extractModuleSymbols(ast)
-			ir := compiler_pkg.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols)
-			baseName := strings.TrimSuffix(f, ".ae")
+			// When calling CompileWithOptionsAndModules, determine the function name robustly:
+			// If this is the entry module, use 'main'. Otherwise, use '__module_' + moduleName.
+			// Pass this as the funcName argument.
+			funcName := "main"
+			if f != entryFile {
+				funcName = "__module_" + moduleName
+			}
+			ir := compiler_pkg.CompileWithOptionsAndModules(ast, moduleName, moduleSymbols, buildFlags.verbose, funcName)
+			outputDir := filepath.Join(projectRoot, projectConfig.Build.OutputDirectory)
+			fmt.Println(outputDir)
+			if outputDir == "" {
+				outputDir = "bin"
+			}
+			_ = os.MkdirAll(outputDir, 0755)
+			baseName := strings.TrimSuffix(filepath.Base(f), ".ae")
+			basePath := filepath.Join(outputDir, baseName)
 			if buildFlags.emitIR || buildFlags.emitLLVM {
-				llFile := baseName + ".ll"
-				must(os.WriteFile(llFile, []byte(ir), 0644))
+				llFile := basePath + ".ll"
+				if err := os.WriteFile(llFile, []byte(ir), 0644); err != nil {
+					printSmartError(err, llFile)
+				}
 				if buildFlags.verbose {
 					fmt.Printf("    Generated IR: %s\n", llFile)
 				}
 			}
 			if buildFlags.emitASM {
-				asmFile := baseName + ".s"
+				asmFile := basePath + ".s"
 				generateAssembly(ir, asmFile)
 				if buildFlags.verbose {
 					fmt.Printf("    Generated ASM: %s\n", asmFile)
 				}
 			}
 			if buildFlags.emitBitcode {
-				bcFile := baseName + ".bc"
+				bcFile := basePath + ".bc"
 				generateBitcode(ir, bcFile)
 				if buildFlags.verbose {
 					fmt.Printf("    Generated Bitcode: %s\n", bcFile)
 				}
 			}
 			if buildFlags.emitObj || buildFlags.emitExe {
-				objFile := baseName + ".o"
+				objFile := basePath + ".o"
 				objectFilesMu.Lock()
 				objectFiles = append(objectFiles, objFile)
 				objectFilesMu.Unlock()
@@ -653,7 +693,7 @@ func doBuild(args []string) {
 			cacheMu.Lock()
 			cache.Files[f] = buildcache.BuildCacheEntry{
 				Hash:      fileHashVal,
-				Output:    baseName + ".o",
+				Output:    basePath + ".o",
 				Deps:      resolvedImports[f],
 				DepHashes: depHashes,
 				LastBuild: time.Now().Unix(),
@@ -665,9 +705,15 @@ func doBuild(args []string) {
 		}
 	}
 
+	// Before scheduling jobs
+	if buildFlags.verbose {
+		fmt.Printf("JOBS KEYS: %v\n", getMapKeys(jobs))
+		fmt.Printf("RESOLVED IMPORTS KEYS: %v\n", getMapKeys(resolvedImports))
+	}
+
 	maxWorkers := buildFlags.threads
 	pool := scheduler.NewPool(maxWorkers)
-	scheduler.RunBatches(jobs, resolvedImports, pool)
+	scheduler.RunBatchesDebug(jobs, resolvedImports, pool, buildFlags.verbose)
 
 	if len(allParseErrors) > 0 {
 		summary := utils.GroupErrorsByFile(allParseErrors)
@@ -859,419 +905,6 @@ func init() {
 	flags.StringVar(&buildFlags.libraryRequires, "library-requires", "", "libraries required by the library")
 	flags.StringVar(&buildFlags.libraryConflicts, "library-conflicts", "", "libraries conflicting with the library")
 	flags.StringVar(&buildFlags.libraryProvides, "library-provides", "", "libraries provided by the library")
-}
-
-func getOptimizationLevel() string {
-	if buildFlags.noOptimize {
-		return "default<O0>"
-	}
-
-	switch buildFlags.optimization {
-	case "0":
-		return "default<O0>"
-	case "1":
-		return "default<O1>"
-	case "2":
-		return "default<O2>"
-	case "3":
-		return "default<O3>"
-	case "s":
-		return "default<Os>"
-	case "z":
-		return "default<Oz>"
-	default:
-		return "default<O2>"
-	}
-}
-
-func generateAssembly(ir string, outputFile string) {
-	// Generate assembly from IR
-	llFile := strings.TrimSuffix(outputFile, ".s") + ".ll"
-	must(os.WriteFile(llFile, []byte(ir), 0644))
-
-	cmd := exec.Command("llc", "-filetype=asm", llFile, "-o", outputFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-}
-
-func generateBitcode(ir string, outputFile string) {
-	// Generate bitcode from IR
-	llFile := strings.TrimSuffix(outputFile, ".bc") + ".ll"
-	must(os.WriteFile(llFile, []byte(ir), 0644))
-
-	cmd := exec.Command("llvm-as", llFile, "-o", outputFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-}
-
-func generateObjectFile(ir string, outputFile string) {
-	// Generate object file from IR
-	llFile := strings.TrimSuffix(outputFile, ".o") + ".ll"
-	must(os.WriteFile(llFile, []byte(ir), 0644))
-
-	cmd := exec.Command("llc", "-filetype=obj", llFile, "-o", outputFile)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-}
-
-func linkObjectFiles(objectFiles []string, output string) {
-	args := append(objectFiles, "-o", output)
-
-	// Add linker-specific flags
-	if buildFlags.fuseLd != "" {
-		args = append([]string{"-fuse-ld=" + buildFlags.fuseLd}, args...)
-	}
-
-	// Add target-specific libraries
-	addTargetLibraries(&args)
-
-	// Add optimization flags
-	if buildFlags.optimization != "0" {
-		args = append(args, "-O"+buildFlags.optimization)
-	}
-
-	// Add debug flags
-	if buildFlags.debugSymbols && !buildFlags.strip {
-		args = append(args, "-g")
-	}
-
-	if buildFlags.strip {
-		args = append(args, "-s")
-	}
-
-	// Add sanitizer flags
-	if buildFlags.sanitize != "" {
-		args = append(args, "-fsanitize="+buildFlags.sanitize)
-	}
-
-	// Add linking flags
-	if buildFlags.static {
-		args = append(args, "-static")
-	}
-
-	if buildFlags.shared {
-		args = append(args, "-shared")
-	}
-
-	if buildFlags.pie {
-		args = append(args, "-pie")
-	}
-
-	if buildFlags.rdynamic {
-		args = append(args, "-rdynamic")
-	}
-
-	if buildFlags.exportDynamic {
-		args = append(args, "-export-dynamic")
-	}
-
-	// Add library flags
-	if buildFlags.nostdlib {
-		args = append(args, "-nostdlib")
-	}
-
-	if buildFlags.nodefaultlibs {
-		args = append(args, "-nodefaultlibs")
-	}
-
-	if buildFlags.nostartfiles {
-		args = append(args, "-nostartfiles")
-	}
-
-	// Add archive flags
-	if buildFlags.wholeArchive {
-		args = append(args, "-whole-archive")
-	}
-
-	if buildFlags.noWholeArchive {
-		args = append(args, "-no-whole-archive")
-	}
-
-	if buildFlags.asNeeded {
-		args = append(args, "-as-needed")
-	}
-
-	if buildFlags.noAsNeeded {
-		args = append(args, "-no-as-needed")
-	}
-
-	// Add runtime flags
-	if buildFlags.rpath != "" {
-		args = append(args, "-rpath", buildFlags.rpath)
-	}
-
-	if buildFlags.rpathLink != "" {
-		args = append(args, "-rpath-link", buildFlags.rpathLink)
-	}
-
-	if buildFlags.soname != "" {
-		args = append(args, "-soname", buildFlags.soname)
-	}
-
-	// Add library paths and libraries
-	if buildFlags.libraryPath != "" {
-		args = append(args, "-L"+buildFlags.libraryPath)
-	}
-
-	if buildFlags.library != "" {
-		args = append(args, "-l"+buildFlags.library)
-	}
-
-	if buildFlags.framework != "" {
-		args = append(args, "-framework", buildFlags.framework)
-	}
-
-	if buildFlags.frameworkPath != "" {
-		args = append(args, "-F"+buildFlags.frameworkPath)
-	}
-
-	// Add initialization flags
-	if buildFlags.init != "" {
-		args = append(args, "-init", buildFlags.init)
-	}
-
-	if buildFlags.fini != "" {
-		args = append(args, "-fini", buildFlags.fini)
-	}
-
-	if buildFlags.preload != "" {
-		args = append(args, "-preload", buildFlags.preload)
-	}
-
-	if buildFlags.wrap != "" {
-		args = append(args, "-wrap", buildFlags.wrap)
-	}
-
-	// Add output control flags
-	if buildFlags.demangle {
-		args = append(args, "--demangle")
-	}
-
-	cmd := exec.Command(buildFlags.linker, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-}
-
-func addTargetLibraries(args *[]string) {
-	switch buildFlags.targetOS {
-	case "linux":
-		switch buildFlags.targetArch {
-		case "amd64":
-			*args = append(*args, "-L/usr/lib/x86_64-linux-gnu", "-L/usr/lib", "/usr/lib/x86_64-linux-gnu/crt1.o", "/usr/lib/x86_64-linux-gnu/crti.o", "-lc", "/usr/lib/x86_64-linux-gnu/crtn.o")
-		case "arm64":
-			*args = append(*args, "-L/usr/lib/aarch64-linux-gnu", "-L/usr/lib", "/usr/lib/aarch64-linux-gnu/crt1.o", "/usr/lib/aarch64-linux-gnu/crti.o", "-lc", "/usr/lib/aarch64-linux-gnu/crtn.o")
-		default:
-			*args = append(*args, "-lc")
-		}
-	case "darwin":
-		*args = append(*args, "-L/usr/lib", "-lc")
-	case "windows":
-		*args = append(*args, "-lkernel32", "-lmsvcrt", "-lucrt", "-loldnames")
-	}
-}
-
-func getDefaultLinker() string {
-	if runtime.GOOS == "windows" {
-		return "lld"
-	}
-	return "mold"
-}
-
-func extractModuleSymbols(prog *parser.Program) map[string]interface{} {
-	symbols := make(map[string]interface{})
-	for _, stmt := range prog.Statements {
-		if assign, ok := stmt.(*parser.Assignment); ok {
-			if len(assign.Names) > 0 && assign.Names[0].Value[0] >= 'A' && assign.Names[0].Value[0] <= 'Z' {
-				// This is an exported symbol
-				symbols[assign.Names[0].Value] = assign.Value
-			}
-		}
-	}
-	return symbols
-}
-
-// New library creation functions
-func createLibrary(objectFiles []string, outputBase string, libType string) {
-	switch libType {
-	case "shared":
-		createSharedLibrary(objectFiles, outputBase)
-	case "static":
-		createStaticLibrary(objectFiles, outputBase)
-	case "both":
-		createSharedLibrary(objectFiles, outputBase)
-		createStaticLibrary(objectFiles, outputBase)
-	default:
-		fmt.Printf("Error: Unknown library type '%s'\n", libType)
-		os.Exit(1)
-	}
-}
-
-func createSharedLibrary(objectFiles []string, outputBase string) {
-	libName := getLibraryName(outputBase)
-	outputFile := getSharedLibraryPath(libName)
-
-	args := append(objectFiles, "-o", outputFile)
-
-	// Add shared library specific flags
-	args = append(args, "-shared")
-
-	// Add position independent code
-	args = append(args, "-fPIC")
-
-	// Add soname if specified
-	if buildFlags.soname != "" {
-		args = append(args, "-soname", buildFlags.soname)
-	} else {
-		args = append(args, "-soname", libName)
-	}
-
-	// Add export symbols if requested
-	if buildFlags.exportSymbols {
-		args = append(args, "-export-dynamic")
-	}
-
-	// Use mold for fast linking
-	if buildFlags.fuseLd != "" {
-		args = append([]string{"-fuse-ld=" + buildFlags.fuseLd}, args...)
-	}
-
-	cmd := exec.Command(buildFlags.linker, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-
-	if !buildFlags.quiet {
-		fmt.Printf("Created shared library: %s\n", outputFile)
-	}
-}
-
-func createStaticLibrary(objectFiles []string, outputBase string) {
-	libName := getLibraryName(outputBase)
-	outputFile := getStaticLibraryPath(libName)
-
-	// Create static library using ar
-	args := append([]string{"rcs", outputFile}, objectFiles...)
-	cmd := exec.Command("ar", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	must(cmd.Run())
-
-	if !buildFlags.quiet {
-		fmt.Printf("Created static library: %s\n", outputFile)
-	}
-}
-
-func generatePkgConfigFile(libName string, outputBase string) {
-	if !buildFlags.generatePkgConfig {
-		return
-	}
-
-	pcContent := generatePkgConfigContent(libName)
-	pcFile := getPkgConfigPath(libName)
-
-	must(os.WriteFile(pcFile, []byte(pcContent), 0644))
-
-	if !buildFlags.quiet {
-		fmt.Printf("Generated pkg-config file: %s\n", pcFile)
-	}
-}
-
-func generatePkgConfigContent(libName string) string {
-	version := buildFlags.libraryVersion
-	if version == "" {
-		version = "1.0.0"
-	}
-
-	description := buildFlags.libraryDescription
-	if description == "" {
-		description = fmt.Sprintf("Aether library %s", libName)
-	}
-
-	url := buildFlags.libraryURL
-	if url == "" {
-		url = "https://github.com/aether-lang"
-	}
-
-	requires := buildFlags.libraryRequires
-	conflicts := buildFlags.libraryConflicts
-	provides := buildFlags.libraryProvides
-
-	content := fmt.Sprintf(`prefix=%s
-exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
-
-Name: %s
-Description: %s
-Version: %s
-URL: %s
-`, getInstallPrefix(), libName, description, version, url)
-
-	if requires != "" {
-		content += fmt.Sprintf("Requires: %s\n", requires)
-	}
-
-	if conflicts != "" {
-		content += fmt.Sprintf("Conflicts: %s\n", conflicts)
-	}
-
-	if provides != "" {
-		content += fmt.Sprintf("Provides: %s\n", provides)
-	}
-
-	content += fmt.Sprintf(`
-Libs: -L${libdir} -l%s
-Cflags: -I${includedir}
-`, libName)
-
-	return content
-}
-
-func getLibraryName(outputBase string) string {
-	if buildFlags.libraryName != "" {
-		return buildFlags.libraryName
-	}
-	return filepath.Base(outputBase)
-}
-
-func getSharedLibraryPath(libName string) string {
-	ext := getSharedLibraryExtension()
-	return fmt.Sprintf("lib%s.%s", libName, ext)
-}
-
-func getStaticLibraryPath(libName string) string {
-	ext := getStaticLibraryExtension()
-	return fmt.Sprintf("lib%s.%s", libName, ext)
-}
-
-func getPkgConfigPath(libName string) string {
-	return fmt.Sprintf("%s.pc", libName)
-}
-
-func getSharedLibraryExtension() string {
-	switch buildFlags.targetOS {
-	case "windows":
-		return "dll"
-	case "darwin":
-		return "dylib"
-	default:
-		return "so"
-	}
-}
-
-func getStaticLibraryExtension() string {
-	switch buildFlags.targetOS {
-	case "windows":
-		return "lib"
-	default:
-		return "a"
-	}
-}
-
-func getInstallPrefix() string {
-	return "/usr/local"
+	flags.BoolVar(&buildFlags.forceRebuild, "force-rebuild", false, "force rebuild all files, ignoring cache")
+	flags.StringVar(&buildFlags.libcType, "libc-type", "glibc", "type of C library to link against (glibc, musl)")
 }

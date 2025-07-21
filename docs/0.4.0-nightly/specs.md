@@ -1,4 +1,4 @@
-# 🍕 Aether Language Specification
+# Aether Language Specification
 
 ---
 

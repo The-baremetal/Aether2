@@ -4,7 +4,8 @@ Aether Programming Language for Windows
 Installation:
 1. Extract the archive to C:\Program Files\Aether
 2. Add C:\Program Files\Aether\bin to your PATH environment variable
-3. Open Command Prompt and run: aether --help
+3. Add C:\Program Files\Aether as an environment variable with the name "AETHERROOT"
+4. Open Command Prompt and run: aether --help
 
 Alternative:
 - Use the included aether.bat file to run Aether without modifying PATH

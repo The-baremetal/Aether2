@@ -4,6 +4,7 @@ Aether Programming Language for FreeBSD
 Installation:
 1. Extract the archive: tar -xvf aether-freebsd_amd64.tar
 2. Copy files to system: sudo cp -r usr/local/* /usr/local/
+3. Add /usr/local/aether as an environment variable with the name "AETHERROOT"
 3. Run: aether --help
 
 The binary will be installed to: /usr/local/aether/bin/aether

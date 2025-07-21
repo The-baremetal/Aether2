@@ -2,19 +2,19 @@
 // #include <stdio.h>
 
 // foreign
-func printf(format)
+func printf(format, ...args)
 // foreign
-func fprintf(stream, format)
+func fprintf(stream, format, ...args)
 // foreign
-func sprintf(buffer, format)
+func sprintf(buffer, format, ...args)
 // foreign
-func snprintf(buffer, size, format)
+func snprintf(buffer, size, format, ...args)
 // foreign
-func scanf(format)
+func scanf(format, ...args)
 // foreign
-func fscanf(stream, format)
+func fscanf(stream, format, ...args)
 // foreign
-func sscanf(str, format)
+func sscanf(str, format, ...args)
 // foreign
 func getchar()
 // foreign

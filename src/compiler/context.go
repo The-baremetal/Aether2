@@ -13,6 +13,7 @@ type CompilerContext struct {
 	current_func *ir.Func
 	modules      map[string]*ModuleInfo
 	libraries    []string
+	verbose      bool
 }
 
 type ModuleInfo struct {
@@ -31,6 +32,7 @@ func NewCompilerContext(module_name string) *CompilerContext {
 		current_func: nil,
 		modules:      make(map[string]*ModuleInfo),
 		libraries:    []string{},
+		verbose:      false,
 	}
 }
 
@@ -45,17 +47,14 @@ func (c *CompilerContext) ExitScope() {
 }
 
 func (c *CompilerContext) SetSymbol(name string, val value.Value) {
-	current_scope := c.scopes[len(c.scopes)-1]
-	current_scope[name] = val
+	// Always set in the global (first) scope only
+	c.scopes[0][name] = val
 }
 
 func (c *CompilerContext) GetSymbol(name string) (value.Value, bool) {
-	for i := len(c.scopes) - 1; i >= 0; i-- {
-		if val, exists := c.scopes[i][name]; exists {
-			return val, true
-		}
-	}
-	return nil, false
+	// Always look in the global (first) scope only
+	val, exists := c.scopes[0][name]
+	return val, exists
 }
 
 func (c *CompilerContext) SetModule(moduleName string, moduleInfo *ModuleInfo) {
@@ -102,4 +101,10 @@ func (c *CompilerContext) GetLibraries() []string {
 
 func (c *CompilerContext) Dispose() {
 	// llir/llvm handles memory management automatically
+}
+
+func (c *CompilerContext) DebugPrint(msg string) {
+	if c.verbose {
+		println("[Aether-DEBUG] " + msg)
+	}
 }

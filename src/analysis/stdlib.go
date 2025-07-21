@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -9,21 +10,35 @@ import (
 // Returns the resolved path and true if found, or "" and false if not found.
 func ResolveStdlibImport(pkgName string) (string, bool) {
 	rootPkgs := GetAetherRootPackagesDir()
+	fmt.Println("[Aether-DEBUG] ResolveStdlibImport: AETHERROOT packages dir:", rootPkgs)
 	if rootPkgs == "" {
+		fmt.Println("[Aether-DEBUG] ResolveStdlibImport: AETHERROOT not set!")
 		return "", false
 	}
 	// Assume stdlib packages are in $AETHERROOT/packages/pkgName/
 	pkgPath := filepath.Join(rootPkgs, pkgName)
+	fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Checking dir:", pkgPath)
 	if stat, err := os.Stat(pkgPath); err == nil && stat.IsDir() {
+		fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Found dir:", pkgPath)
 		return pkgPath, true
 	}
 	// Also check for a single-file package: $AETHERROOT/packages/pkgName.ae or .aeth
 	for _, ext := range []string{".ae", ".aeth"} {
 		filePath := filepath.Join(rootPkgs, pkgName+ext)
+		fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Checking file:", filePath)
 		if stat, err := os.Stat(filePath); err == nil && !stat.IsDir() {
+			fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Found file:", filePath)
 			return filePath, true
 		}
 	}
+	// Also check for nested stdlib: $AETHERROOT/packages/c/src/stdio.ae
+	nestedPath := filepath.Join(rootPkgs, "c", "src", pkgName+".ae")
+	fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Checking nested file:", nestedPath)
+	if stat, err := os.Stat(nestedPath); err == nil && !stat.IsDir() {
+		fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Found nested file:", nestedPath)
+		return nestedPath, true
+	}
+	fmt.Println("[Aether-DEBUG] ResolveStdlibImport: Not found for:", pkgName)
 	return "", false
 }
 

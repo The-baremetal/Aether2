@@ -1,3 +1,40 @@
 {
-  "files": {}
+  "files": {
+    "../../packages/c/src/stdio.ae": {
+      "hash": "b2b68f7c0a591f105d559fd92ce4478353a3accaf8321da21406ce6ddc89c557",
+      "output": "bin/stdio.o",
+      "deps": [],
+      "dep_hashes": {},
+      "last_build": 1753067090
+    },
+    "..\\..\\packages\\c\\src\\stdio.ae": {
+      "hash": "b2b68f7c0a591f105d559fd92ce4478353a3accaf8321da21406ce6ddc89c557",
+      "output": "bin\\stdio.o",
+      "deps": [],
+      "dep_hashes": {},
+      "last_build": 1753066086
+    },
+    "src/main.aeth": {
+      "hash": "6ff68996c5ce1f8a8f5788930828e42e96acae9a95e9639cccdcf51788d516bd",
+      "output": "bin/main.aeth.o",
+      "deps": [
+        "../../packages/c/src/stdio.ae"
+      ],
+      "dep_hashes": {
+        "../../packages/c/src/stdio.ae": "b2b68f7c0a591f105d559fd92ce4478353a3accaf8321da21406ce6ddc89c557"
+      },
+      "last_build": 1753067091
+    },
+    "src\\main.aeth": {
+      "hash": "6ff68996c5ce1f8a8f5788930828e42e96acae9a95e9639cccdcf51788d516bd",
+      "output": "bin\\main.aeth.o",
+      "deps": [
+        "..\\..\\packages\\c\\src\\stdio.ae"
+      ],
+      "dep_hashes": {
+        "..\\..\\packages\\c\\src\\stdio.ae": "b2b68f7c0a591f105d559fd92ce4478353a3accaf8321da21406ce6ddc89c557"
+      },
+      "last_build": 1753066086
+    }
+  }
 }

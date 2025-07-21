@@ -5,3 +5,20 @@ set -e
 if [ -L /usr/local/bin/aether ]; then
     rm -f /usr/local/bin/aether
 fi
+
+# Remove AETHERROOT from /etc/environment
+if grep -q "AETHERROOT=" /etc/environment; then
+    sed -i '/^AETHERROOT=/d' /etc/environment
+fi
+
+# Remove /usr/local/bin from PATH in /etc/environment (only if this exact PATH was added)
+if grep -q 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' /etc/environment; then
+    sed -i '/^PATH="\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin"/d' /etc/environment
+fi
+
+# Remove fish shell universal variable
+if command -v fish >/dev/null 2>&1; then
+    fish -c 'set -eU AETHERROOT'
+fi
+
+echo "Aether has been completely uninstalled."
